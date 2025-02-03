@@ -48,7 +48,16 @@ jobs:
         baseRegistry: gcr.io
         baseTag: debug
         targetImage: imported/distroless/java17
-
+      openjdk-21-jdk-slim-bullseye:
+        baseImage: openjdk:21-jdk-slim-bullseye
+        baseRegistry: gcr.io
+        baseTag: latest
+        targetImage: imported/slim-bullseye/java21
+      openjdk-21-jdk-slim-bookworm:
+        baseImage: openjdk:21-jdk-slim-bookworm
+        baseRegistry: gcr.io
+        baseTag: latest
+        targetImage: imported/slim-bookworm/java21
   steps:
   - task: AzureKeyVault@1
     displayName: 'Get secrets from Keyvault'
