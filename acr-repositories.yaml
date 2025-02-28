@@ -5,6 +5,10 @@ rules:
     ruleName: postgresql
     repoName: bitnami/postgresql
     destinationRepo: imported/bitnami/postgresql
+  bitnamicharts-postgresql:
+    ruleName: bitnamicharts-postgresql
+    repoName: bitnamicharts/postgresql
+    destinationRepo: imported/bitnamicharts/postgresql
   postgres:
     ruleName: postgres
     repoName: library/postgres
@@ -25,14 +29,26 @@ rules:
     ruleName: external-dns
     repoName: bitnami/external-dns
     destinationRepo: imported/bitnami/external-dns
+  bitnamicharts-external-dns:
+    ruleName: bitnamicharts-external-dns
+    repoName: bitnamicharts/external-dns
+    destinationRepo: imported/bitnamicharts/external-dns
   kubectl:
     ruleName: kubectl
     repoName: bitnami/kubectl
     destinationRepo: imported/bitnami/kubectl
+  bitnamicharts-kubectl:
+    ruleName: bitnamicharts-kubectl
+    repoName: bitnamicharts/kubectl
+    destinationRepo: imported/bitnamicharts/kubectl
   bitnami-redis:
     ruleName: bitnami-redis
     repoName: bitnami/redis
     destinationRepo: imported/bitnami/redis
+  bitnamicharts-redis:
+    ruleName: bitnamicharts-redis
+    repoName: bitnamicharts/redis
+    destinationRepo: imported/bitnamicharts/redis
   pact-broker:
     ruleName: pact-broker
     repoName: dius/pact-broker
