@@ -52,6 +52,7 @@ Below is a table of upstream image repositories that will have supported cache r
 | `traefik`                              | `hmctspublic.azurecr.io/imported/traefik`                              |
 | `willwill/kube-slack`                  | `hmctspublic.azurecr.io/imported/willwill/kube-slack`                  |
 | `williamyeh/java8`                     | `hmctspublic.azurecr.io/imported/williamyeh/java8`                     |
+| `wiremock/wiremock`                    | `hmctspublic.azurecr.io/imported/wiremock/wiremock`                    |
 | `azure-storage/azurite`                | `hmctspublic.azurecr.io/imported/azure-storage/azurite`                |
 | `atmoz/sftp`                           | `hmctspublic.azurecr.io/imported/atmoz/sftp`                           |
 | `citizensadvice/clamav-mock`           | `hmctspublic.azurecr.io/imported/citizensadvice/clamav-mock`           |
