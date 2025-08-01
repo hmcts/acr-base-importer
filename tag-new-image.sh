@@ -53,15 +53,15 @@ do
 done
 
 # Check if all arguments are provided
-if [ -z "$baseTag" ] || [ -z "$targetImage" ] || [ -z "$acrName" ] || [ -z "$targetRegistry" ] || [ -z "$baseDigest" ] || [ -z "$acrDigest" ]; then
+if [ -z "$baseTag" ] || [ -z "$targetImage" ] || [ -z "$acrName" ] || [ -z "$targetRegistry" ] || [ -z "$baseDigest" ]; then
     echo "------------------------" 
     echo 'Some values are missing, please supply all the required arguments' >&2
     echo "------------------------"
     exit 1
 fi
 
-# Move base tag to new image
-[ "${acrDigest}" != "" ] && echo "Untagging previous ${baseTag} ..." && az acr repository untag -n ${acrName} --image ${targetImage}:${baseTag}
+# Only untag if acrDigest is set (not empty)
+[ -n "${acrDigest}" ] && echo "Untagging previous ${baseTag} ..." && az acr repository untag -n ${acrName} --image ${targetImage}:${baseTag}
 
 echo "Tagging ${baseTag}-${baseDigest} as ${baseTag} ..."
 az acr import --name ${acrName} --source ${targetRegistry}/${targetImage}:${baseTag}-${baseDigest} --image ${targetImage}:${baseTag} 
