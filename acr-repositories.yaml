@@ -199,3 +199,7 @@ rules:
     ruleName: mikefarah-yq
     repoName: mikefarah/yq
     destinationRepo: imported/mikefarah/yq
+  wiremock:
+    ruleName: wiremock
+    repoName: wiremock/wiremock
+    destinationRepo: imported/wiremock/wiremock
