@@ -5,6 +5,10 @@ rules:
     ruleName: postgresql
     repoName: bitnami/postgresql
     destinationRepo: imported/bitnami/postgresql
+  postgres-exporter:
+    ruleName: postgres-exporter
+    repoName: bitnami/postgres-exporter
+    destinationRepo: imported/postgres-exporter
   postgres:
     ruleName: postgres
     repoName: library/postgres
@@ -33,6 +37,14 @@ rules:
     ruleName: bitnami-redis
     repoName: bitnami/redis
     destinationRepo: imported/bitnami/redis
+  bitnami-redis-exporter:
+    ruleName: bitnami-redis-exporter
+    repoName: bitnami/redis-exporter
+    destinationRepo: imported/bitnami/redis-exporter
+  bitnami-redis-sentinel:
+    ruleName: bitnami-redis-sentinel
+    repoName: bitnami/redis-sentinel
+    destinationRepo: imported/bitnami/redis-sentinel
   pact-broker:
     ruleName: pact-broker
     repoName: dius/pact-broker
@@ -199,6 +211,10 @@ rules:
     ruleName: mikefarah-yq
     repoName: mikefarah/yq
     destinationRepo: imported/mikefarah/yq
+  os-shell:
+    ruleName: os-shell
+    repoName: bitnami/os-shell
+    destinationRepo: imported/os-shell
   wiremock:
     ruleName: wiremock
     repoName: wiremock/wiremock
