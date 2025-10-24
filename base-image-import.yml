@@ -28,6 +28,16 @@ jobs:
   strategy:
     maxParallel: 5
     matrix:
+      openjdk-25-distroless:
+        baseImage: distroless/java25-debian13
+        baseRegistry: gcr.io
+        baseTag: latest
+        targetImage: imported/distroless/java25
+      openjdk-25-debug-distroless:
+        baseImage: distroless/java25-debian13
+        baseRegistry: gcr.io
+        baseTag: debug
+        targetImage: imported/distroless/java25
       openjdk-21-distroless:
         baseImage: distroless/java21-debian12
         baseRegistry: gcr.io
