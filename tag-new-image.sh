@@ -52,8 +52,8 @@ do
     esac
 done
 
-# Check if all arguments are provided
-if [ -z "$baseTag" ] || [ -z "$targetImage" ] || [ -z "$acrName" ] || [ -z "$targetRegistry" ] || [ -z "$baseDigest" ] || [ -z "$acrDigest" ]; then
+# Check if all arguments are provided (acrDigest can be empty for new images)
+if [ -z "$baseTag" ] || [ -z "$targetImage" ] || [ -z "$acrName" ] || [ -z "$targetRegistry" ] || [ -z "$baseDigest" ]; then
     echo "------------------------" 
     echo 'Some values are missing, please supply all the required arguments' >&2
     echo "------------------------"
