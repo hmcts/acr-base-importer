@@ -219,3 +219,7 @@ rules:
     ruleName: wiremock
     repoName: wiremock/wiremock
     destinationRepo: imported/wiremock/wiremock
+  opentelemetry-collector-contrib:
+    ruleName: opentelemetry-collector-contrib
+    repoName: otel/opentelemetry-collector-contrib
+    destinationRepo: imported/otel/opentelemetry-collector-contrib
