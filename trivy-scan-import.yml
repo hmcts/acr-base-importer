@@ -90,9 +90,11 @@ jobs:
         echo "Verifying checksum..."
         grep "trivy_$(trivyVersion)_Linux-64bit.tar.gz" trivy_$(trivyVersion)_checksums.txt | sha256sum -c -
 
-        # Extract and install
+        # Extract and install to local bin (no sudo needed)
         tar -xzf trivy_$(trivyVersion)_Linux-64bit.tar.gz
-        sudo mv trivy /usr/local/bin/
+        mkdir -p ${HOME}/.local/bin
+        mv trivy ${HOME}/.local/bin/
+        export PATH="${HOME}/.local/bin:${PATH}"
 
         # Clean up
         rm -f trivy_$(trivyVersion)_Linux-64bit.tar.gz trivy_$(trivyVersion)_checksums.txt
