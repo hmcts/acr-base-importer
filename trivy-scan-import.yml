@@ -213,7 +213,7 @@ jobs:
         inlineScript: |
           set -e
 
-          BASE_DIGEST="${{ variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest'] }}"
+          BASE_DIGEST="$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)"
 
           echo "Importing ${{ image.baseRegistry }}/${{ image.baseImage }}:${{ image.baseTag }}"
 
