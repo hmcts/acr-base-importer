@@ -65,7 +65,7 @@ jobs:
 
   steps:
   # Get secrets from Key Vault for ACR authentication and notifications
-  - task: AzureKeyVault@1
+  - task: AzureKeyVault@2
     displayName: 'Get ACR credentials from Key Vault'
     inputs:
       azureSubscription: $(serviceConnection)

@@ -78,7 +78,7 @@ echo "Target registry current digest for ${baseImage}:${baseTag}: [${_acr_digest
 
 [[ "$_acr_digest" != "" && "$_acr_digest" == "$_digest" ]] && echo "Nothing to import for ${baseRegistry}/${baseImage}." && exit 0  # Nothing else to do
 
-# Export variables for next stages
-echo "##vso[task.setvariable variable=newTagFound]true" 
-echo "##vso[task.setvariable variable=acrDigest]$_acr_digest"
-echo "##vso[task.setvariable variable=baseDigest]${_digest:7:6}"
+# Export variables for next stages (with isOutput=true to make them available to other tasks)
+echo "##vso[task.setvariable variable=newTagFound;isOutput=true]true" 
+echo "##vso[task.setvariable variable=acrDigest;isOutput=true]$_acr_digest"
+echo "##vso[task.setvariable variable=baseDigest;isOutput=true]${_digest:7:6}"
