@@ -1,0 +1,10 @@
+# Trivy Ignore File
+# Add CVE IDs here to ignore specific vulnerabilities
+# Use this for known false positives or accepted risks
+#
+# Example:
+# CVE-2023-12345
+#
+# Document why each CVE is ignored:
+# CVE-2023-12345 - Not exploitable in our use case (reason documented in JIRA-1234)
+#
