@@ -201,6 +201,13 @@ jobs:
             --output "trivy-scan-${SAFE_NAME}.txt" \
             "$REPORT_FILE" || true
 
+          # Display table in console for readability
+          echo ""
+          echo "=== Vulnerability Scan Report ==="
+          cat "trivy-scan-${SAFE_NAME}.txt" || echo "Unable to display report"
+          echo "=================================="
+          echo ""
+
           echo "Vulnerabilities: Critical=$CRITICAL_COUNT, High=$HIGH_COUNT"
 
           # Determine pass/fail based on critical count
@@ -252,12 +259,24 @@ jobs:
     #       --baseDigest "${{ variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest'] }}"
     #       --acrDigest "${{ variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest'] }}"
 
+  # Copy Trivy reports to staging directory
+  - task: Bash@3
+    displayName: 'Prepare Trivy reports for upload'
+    condition: always()
+    inputs:
+      targetType: 'inline'
+      script: |
+        mkdir -p "$(Build.ArtifactStagingDirectory)/trivy-reports"
+        cp -v trivy-*.json "$(Build.ArtifactStagingDirectory)/trivy-reports/" 2>/dev/null || echo "No JSON reports found"
+        cp -v trivy-*.txt "$(Build.ArtifactStagingDirectory)/trivy-reports/" 2>/dev/null || echo "No TXT reports found"
+        ls -lh "$(Build.ArtifactStagingDirectory)/trivy-reports/" || echo "No reports copied"
+
   # Publish all Trivy scan results as pipeline artifacts
   - task: PublishPipelineArtifact@1
     displayName: 'Publish Trivy scan reports'
     condition: always()
     inputs:
-      targetPath: '$(System.DefaultWorkingDirectory)'
+      targetPath: '$(Build.ArtifactStagingDirectory)/trivy-reports'
       artifact: 'trivy-scan-reports'
       publishLocation: 'pipeline'
 
