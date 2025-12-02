@@ -16,10 +16,10 @@ Script to check if AKS cluster is active state
 Usage: $0
     [ -bi |--baseImage ]
     [ -br |--baseRegistry ]
-    [ -bt |--baseTag ] 
+    [ -bt |--baseTag ]
     [ -ti |--targetImage ]
     [ -an |--acrName ]
-    [ -h |--help ] 
+    [ -h |--help ]
 EOF
 exit 1
 }
@@ -51,7 +51,7 @@ done
 
 # Check if all arguments are provided
 if [ -z "$baseImage" ] || [ -z "$baseRegistry" ] || [ -z "$baseTag" ] || [ -z "$targetImage" ] || [ -z "$acrName" ]; then
-    echo "------------------------" 
+    echo "------------------------"
     echo 'Some values are missing, please supply all the required arguments' >&2
     echo "------------------------"
     exit 1
@@ -79,6 +79,6 @@ echo "Target registry current digest for ${baseImage}:${baseTag}: [${_acr_digest
 [[ "$_acr_digest" != "" && "$_acr_digest" == "$_digest" ]] && echo "Nothing to import for ${baseRegistry}/${baseImage}." && exit 0  # Nothing else to do
 
 # Export variables for next stages (with isOutput=true to make them available to other tasks)
-echo "##vso[task.setvariable variable=newTagFound;isOutput=true]true" 
+echo "##vso[task.setvariable variable=newTagFound;isOutput=true]true"
 echo "##vso[task.setvariable variable=acrDigest;isOutput=true]$_acr_digest"
 echo "##vso[task.setvariable variable=baseDigest;isOutput=true]${_digest:7:6}"
