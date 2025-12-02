@@ -117,12 +117,29 @@ jobs:
         for i in 1 2 3; do
           echo "Database download attempt $i of 3..."
           if ./trivy image --download-db-only; then
-            echo "Database updated successfully"
-            echo "Cache location: $TRIVY_CACHE_DIR"
+            echo "Vulnerability database updated successfully"
             break
           else
             if [ $i -eq 3 ]; then
               echo "##vso[task.logissue type=error]Failed to download vulnerability database after 3 attempts"
+              exit 1
+            fi
+            echo "Download failed, waiting before retry..."
+            sleep $((5 * i))  # Wait 5s, 10s, 15s
+          fi
+        done
+
+        echo "Updating Trivy Java database..."
+        # Download Java DB for scanning Java images
+        for i in 1 2 3; do
+          echo "Java DB download attempt $i of 3..."
+          if ./trivy image --download-java-db-only; then
+            echo "Java database updated successfully"
+            echo "Cache location: $TRIVY_CACHE_DIR"
+            break
+          else
+            if [ $i -eq 3 ]; then
+              echo "##vso[task.logissue type=error]Failed to download Java database after 3 attempts"
               exit 1
             fi
             echo "Download failed, waiting before retry..."
