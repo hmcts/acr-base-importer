@@ -217,27 +217,25 @@ jobs:
 
           echo "Importing ${{ image.baseRegistry }}/${{ image.baseImage }}:${{ image.baseTag }}"
 
-          az acr import --force --name $(acrName) --source "${{ image.baseRegistry }}/${{ image.baseImage }}:${{ image.baseTag }}" --image "${{ image.targetImage }}:${{ image.baseTag }}-${BASE_DIGEST}"
-
     # Re-tag image
-    - task: AzureCLI@1
-      displayName: 'Tag: ${{ image.baseImage }}:${{ image.baseTag }}'
-      condition: |
-        and(
-          eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true'),
-          eq(variables['scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true')
-        )
-      inputs:
-        azureSubscription: $(serviceConnection)
-        scriptLocation: 'scriptPath'
-        scriptPath: tag-new-image.sh
-        arguments: >
-          --baseTag "${{ image.baseTag }}"
-          --targetImage "${{ image.targetImage }}"
-          --acrName "$(acrName)"
-          --targetRegistry "$(targetRegistry)"
-          --baseDigest "${{ variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest'] }}"
-          --acrDigest "${{ variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest'] }}"
+    # - task: AzureCLI@1
+    #   displayName: 'Tag: ${{ image.baseImage }}:${{ image.baseTag }}'
+    #   condition: |
+    #     and(
+    #       eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true'),
+    #       eq(variables['scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true')
+    #     )
+    #   inputs:
+    #     azureSubscription: $(serviceConnection)
+    #     scriptLocation: 'scriptPath'
+    #     scriptPath: tag-new-image.sh
+    #     arguments: >
+    #       --baseTag "${{ image.baseTag }}"
+    #       --targetImage "${{ image.targetImage }}"
+    #       --acrName "$(acrName)"
+    #       --targetRegistry "$(targetRegistry)"
+    #       --baseDigest "${{ variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest'] }}"
+    #       --acrDigest "${{ variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest'] }}"
 
   # Publish all Trivy scan results as pipeline artifacts
   - task: PublishPipelineArtifact@1
@@ -248,16 +246,16 @@ jobs:
       artifact: 'trivy-scan-reports'
       publishLocation: 'pipeline'
 
-  # Optional: Create ACR Cache (keep from original pipeline if still needed)
-  - job: CreateACRCache
-    dependsOn: ScanAndImportImages
-    condition: succeeded()
-    pool:
-      vmImage: ubuntu-latest
-    steps:
-      - task: AzureCLI@1
-        displayName: 'Create ACR Cache'
-        inputs:
-          azureSubscription: $(serviceConnection)
-          scriptLocation: 'scriptPath'
-          scriptPath: acr-cache.sh
+  # # Optional: Create ACR Cache (keep from original pipeline if still needed)
+  # - job: CreateACRCache
+  #   dependsOn: ScanAndImportImages
+  #   condition: succeeded()
+  #   pool:
+  #     vmImage: ubuntu-latest
+  #   steps:
+  #     - task: AzureCLI@1
+  #       displayName: 'Create ACR Cache'
+  #       inputs:
+  #         azureSubscription: $(serviceConnection)
+  #         scriptLocation: 'scriptPath'
+  #         scriptPath: acr-cache.sh
