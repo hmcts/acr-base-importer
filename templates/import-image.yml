@@ -48,7 +48,7 @@ steps:
     azureSubscription: ${{ parameters.serviceConnection }}
     scriptType: bash
     scriptLocation: inlineScript
-    script: |
+    inlineScript: |
       echo "Importing ${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }} as ${{ parameters.targetImage }}:${{ parameters.baseTag }}-${{ parameters.baseDigest }} ..."
       az acr import --force --name ${{ parameters.acrName }} --source ${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }} --image ${{ parameters.targetImage }}:${{ parameters.baseTag }}-${{ parameters.baseDigest }}
 
