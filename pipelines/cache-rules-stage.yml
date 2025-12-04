@@ -57,14 +57,14 @@ stages:
           baseTag: 'latest'
           severityThreshold: ${{ parameters.severityThreshold }}
           trivyTimeout: ${{ parameters.trivyTimeout }}
-          taskName: scan_source_${{ rule.ruleName }}
+          taskName: scan_source_${{ replace(rule.ruleName, '-', '_') }}
           condition: 'true'
 
       # Create ACR cache rules only if source image passed scanning
       - task: AzureCLI@2
         displayName: 'Create cache rule: ${{ rule.ruleName }}'
-        name: create_${{ rule.ruleName }}
-        condition: eq(variables['scan_source_${{ rule.ruleName }}.scanPassed'], 'true')
+        name: create_${{ replace(rule.ruleName, '-', '_') }}
+        condition: eq(variables['scan_source_${{ replace(rule.ruleName, '-', '_') }}.scanPassed'], 'true')
         inputs:
           azureSubscription: ${{ parameters.serviceConnection }}
           scriptType: bash
@@ -91,7 +91,7 @@ stages:
     - ${{ each rule in parameters.cacheRulesToValidate }}:
       - task: AzureCLI@2
         displayName: 'Check if cached image exists: ${{ rule.destinationRepo }}'
-        name: check_dest_${{ rule.ruleName }}
+        name: check_dest_${{ replace(rule.ruleName, '-', '_') }}
         condition: 'true'
         inputs:
           azureSubscription: ${{ parameters.serviceConnection }}
@@ -113,5 +113,5 @@ stages:
           baseTag: 'latest'
           severityThreshold: ${{ parameters.severityThreshold }}
           trivyTimeout: ${{ parameters.trivyTimeout }}
-          taskName: scan_dest_${{ rule.ruleName }}
-          condition: eq(variables['check_dest_${{ rule.ruleName }}.imageExists'], 'true')
+          taskName: scan_dest_${{ replace(rule.ruleName, '-', '_') }}
+          condition: eq(variables['check_dest_${{ replace(rule.ruleName, '-', '_') }}.imageExists'], 'true')
