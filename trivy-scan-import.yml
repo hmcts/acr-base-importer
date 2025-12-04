@@ -56,29 +56,32 @@ variables:
   severityThreshold: 'CRITICAL,HIGH'
   trivyTimeout: '10m'
 
-jobs:
-- job: ScanAndImportImages
+stages:
+- stage: ScanAndImport
   displayName: 'Scan with Trivy and Import to ACR'
-  timeoutInMinutes: 120  # 2 hours max - prevents hanging
-  pool:
-    name: hmcts-cftptl-agent-pool
+  jobs:
+  - job: ScanAndImportImages
+    displayName: 'Scan with Trivy and Import to ACR'
+    timeoutInMinutes: 120  # 2 hours max - prevents hanging
+    pool:
+      name: hmcts-cftptl-agent-pool
 
-  steps:
-  # Get secrets from Key Vault for ACR authentication and notifications
-  - task: AzureKeyVault@2
-    displayName: 'Get ACR credentials from Key Vault'
-    inputs:
-      azureSubscription: $(serviceConnection)
-      keyVaultName: $(keyvaultName)
-      secretsFilter: 'registry-public-username,registry-public-password,registry-slack-webhook'
+    steps:
+    # Get secrets from Key Vault for ACR authentication and notifications
+    - task: AzureKeyVault@2
+      displayName: 'Get ACR credentials from Key Vault'
+      inputs:
+        azureSubscription: $(serviceConnection)
+        keyVaultName: $(keyvaultName)
+        secretsFilter: 'registry-public-username,registry-public-password,registry-slack-webhook'
 
-  # Setup Trivy scanner (install binary and update databases)
-  - template: templates/setup-trivy.yml
-    parameters:
-      trivyVersion: $(trivyVersion)
+    # Setup Trivy scanner (install binary and update databases)
+    - template: templates/setup-trivy.yml
+      parameters:
+        trivyVersion: $(trivyVersion)
 
-  # Loop over each image using Azure DevOps native each loops
-  - ${{ each image in parameters.imagesToScan }}:
+    # Loop over each image using Azure DevOps native each loops
+    - ${{ each image in parameters.imagesToScan }}:
     # Check if new version exists
     - task: AzureCLI@2
       displayName: 'Check version: ${{ image.baseImage }}:${{ image.baseTag }}'
@@ -140,16 +143,20 @@ jobs:
     #       --baseDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)"
     #       --acrDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)"
 
-# - job: CreateACRCache
-#   dependsOn: ScanAndImportImages
-#   condition: succeeded()
-#   pool:
-#     vmImage: ubuntu-latest
-#   steps:
-#     - task: AzureCLI@2
-#       displayName: 'Create ACR Cache'
-#       inputs:
-#         azureSubscription: $(serviceConnection)
-#         scriptType: bash
-#         scriptLocation: scriptPath
-#         scriptPath: acr-cache.sh
+- stage: CreateCache
+  displayName: 'Create ACR Cache'
+  dependsOn: ScanAndImport
+  condition: succeeded()
+  jobs:
+  - job: CreateACRCache
+    displayName: 'Create ACR Cache'
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - task: AzureCLI@2
+        displayName: 'Create ACR Cache'
+        inputs:
+          azureSubscription: $(serviceConnection)
+          scriptType: bash
+          scriptLocation: scriptPath
+          scriptPath: acr-cache.sh
