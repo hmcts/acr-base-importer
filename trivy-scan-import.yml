@@ -1,6 +1,7 @@
 #
+## Main Orchestration Pipeline
 ## Scan and import container images using Trivy
-## This pipeline scans container images for vulnerabilities before importing to ACR
+## This pipeline coordinates base image imports and ACR cache rule creation
 ##
 name: Trivy Scan and ACR Import
 
@@ -15,9 +16,9 @@ schedules:
     - master
   always: 'true'
 
-# Define images to scan as a parameter (allows modification at queue time)
+# Parameters with inline defaults
 parameters:
-- name: imagesToScan
+- name: baseImagestoImport
   type: object
   displayName: 'Images to scan and import'
   default:
@@ -46,117 +47,262 @@ parameters:
     baseTag: 'debug'
     targetImage: 'imported/distroless/java17'
 
+- name: cacheRulesToValidate
+  type: object
+  displayName: 'Cache rules to validate (from acr-repositories.yaml)'
+  default:
+  - ruleName: 'postgresql'
+    baseRegistry: 'docker.io'
+    baseImage: 'bitnami/postgresql'
+    destinationRepo: 'imported/bitnami/postgresql'
+  - ruleName: 'postgres-exporter'
+    baseRegistry: 'docker.io'
+    baseImage: 'bitnami/postgres-exporter'
+    destinationRepo: 'imported/postgres-exporter'
+  - ruleName: 'postgres'
+    baseRegistry: 'docker.io'
+    baseImage: 'library/postgres'
+    destinationRepo: 'imported/postgres'
+  - ruleName: 'postgresql-client'
+    baseRegistry: 'docker.io'
+    baseImage: 'jbergknoff/postgresql-client'
+    destinationRepo: 'imported/jbergknoff/postgresql-client'
+  - ruleName: 'curl-cache'
+    baseRegistry: 'docker.io'
+    baseImage: 'curlimages/curl'
+    destinationRepo: 'imported/curlimages/curl'
+  - ruleName: 'elastic-search'
+    baseRegistry: 'docker.io'
+    baseImage: 'elasticsearch/elasticsearch'
+    destinationRepo: 'imported/elastic/elasticsearch'
+  - ruleName: 'external-dns'
+    baseRegistry: 'docker.io'
+    baseImage: 'bitnami/external-dns'
+    destinationRepo: 'imported/bitnami/external-dns'
+  - ruleName: 'kubectl'
+    baseRegistry: 'docker.io'
+    baseImage: 'bitnami/kubectl'
+    destinationRepo: 'imported/bitnami/kubectl'
+  - ruleName: 'bitnami-redis'
+    baseRegistry: 'docker.io'
+    baseImage: 'bitnami/redis'
+    destinationRepo: 'imported/bitnami/redis'
+  - ruleName: 'bitnami-redis-exporter'
+    baseRegistry: 'docker.io'
+    baseImage: 'bitnami/redis-exporter'
+    destinationRepo: 'imported/bitnami/redis-exporter'
+  - ruleName: 'bitnami-redis-sentinel'
+    baseRegistry: 'docker.io'
+    baseImage: 'bitnami/redis-sentinel'
+    destinationRepo: 'imported/bitnami/redis-sentinel'
+  - ruleName: 'pact-broker'
+    baseRegistry: 'docker.io'
+    baseImage: 'dius/pact-broker'
+    destinationRepo: 'imported/dius/pact-broker'
+  - ruleName: 'datawire-tel2'
+    baseRegistry: 'docker.io'
+    baseImage: 'datawire/tel2'
+    destinationRepo: 'imported/datawire/tel2'
+  - ruleName: 'service-catalog'
+    baseRegistry: 'docker.io'
+    baseImage: 'drycc/service-catalog'
+    destinationRepo: 'imported/drycc/service-catalog'
+  - ruleName: 'dynatrace-operator'
+    baseRegistry: 'docker.io'
+    baseImage: 'dynatrace/dynatrace-operator'
+    destinationRepo: 'imported/dynatrace/dynatrace-operator'
+  - ruleName: 'fluent-bit'
+    baseRegistry: 'docker.io'
+    baseImage: 'fluent/fluent-bit'
+    destinationRepo: 'imported/fluent/fluent-bit'
+  - ruleName: 'grafana'
+    baseRegistry: 'docker.io'
+    baseImage: 'grafana/grafana'
+    destinationRepo: 'imported/grafana'
+  - ruleName: 'testkube-api-server'
+    baseRegistry: 'docker.io'
+    baseImage: 'kubeshop/testkube-api-server'
+    destinationRepo: 'imported/kubeshop/testkube-api-server'
+  - ruleName: 'testkube-dashboard'
+    baseRegistry: 'docker.io'
+    baseImage: 'kubeshop/testkube-dashboard'
+    destinationRepo: 'imported/kubeshop/testkube-dashboard'
+  - ruleName: 'testkube-operator'
+    baseRegistry: 'docker.io'
+    baseImage: 'kubeshop/testkube-operator'
+    destinationRepo: 'imported/kubeshop/testkube-operator'
+  - ruleName: 'minio'
+    baseRegistry: 'docker.io'
+    baseImage: 'minio/minio'
+    destinationRepo: 'imported/minio/minio'
+  - ruleName: 'neuvector-controller'
+    baseRegistry: 'docker.io'
+    baseImage: 'neuvector/controller'
+    destinationRepo: 'imported/neuvector/controller'
+  - ruleName: 'neuvector-enforcer'
+    baseRegistry: 'docker.io'
+    baseImage: 'neuvector/enforcer'
+    destinationRepo: 'imported/neuvector/enforcer'
+  - ruleName: 'neuvector-manager'
+    baseRegistry: 'docker.io'
+    baseImage: 'neuvector/manager'
+    destinationRepo: 'imported/neuvector/manager'
+  - ruleName: 'neuvector-scanner'
+    baseRegistry: 'docker.io'
+    baseImage: 'neuvector/scanner'
+    destinationRepo: 'imported/neuvector/scanner'
+  - ruleName: 'neuvector-updater'
+    baseRegistry: 'docker.io'
+    baseImage: 'neuvector/updater'
+    destinationRepo: 'imported/neuvector/updater'
+  - ruleName: 'traefik'
+    baseRegistry: 'docker.io'
+    baseImage: 'library/traefik'
+    destinationRepo: 'imported/traefik'
+  - ruleName: 'configmap-reload'
+    baseRegistry: 'docker.io'
+    baseImage: 'jimmidyson/configmap-reload'
+    destinationRepo: 'imported/jimmidyson/configmap-reload'
+  - ruleName: 'k8s-sidecar'
+    baseRegistry: 'docker.io'
+    baseImage: 'kiwigrid/k8s-sidecar'
+    destinationRepo: 'imported/kiwigrid/k8s-sidecar'
+  - ruleName: 'openssh-server'
+    baseRegistry: 'docker.io'
+    baseImage: 'linuxserver/openssh-server'
+    destinationRepo: 'imported/linuxserver/openssh-server'
+  - ruleName: 'mailhog'
+    baseRegistry: 'docker.io'
+    baseImage: 'mailhog/mailhog'
+    destinationRepo: 'imported/mailhog/mailhog'
+  - ruleName: 'nats-rule'
+    baseRegistry: 'docker.io'
+    baseImage: 'library/nats'
+    destinationRepo: 'imported/nats'
+  - ruleName: 'nats-server-config-reloader'
+    baseRegistry: 'docker.io'
+    baseImage: 'natsio/nats-server-config-reloader'
+    destinationRepo: 'imported/natsio/nats-server-config-reloader'
+  - ruleName: 'prometheus-nats-exporter'
+    baseRegistry: 'docker.io'
+    baseImage: 'natsio/prometheus-nats-exporter'
+    destinationRepo: 'imported/natsio/prometheus-nats-exporter'
+  - ruleName: 'netbox'
+    baseRegistry: 'docker.io'
+    baseImage: 'netboxcommunity/netbox'
+    destinationRepo: 'imported/netboxcommunity/netbox'
+  - ruleName: 'nodejs'
+    baseRegistry: 'docker.io'
+    baseImage: 'library/node'
+    destinationRepo: 'imported/library/node'
+  - ruleName: 'nginx'
+    baseRegistry: 'docker.io'
+    baseImage: 'library/nginx'
+    destinationRepo: 'imported/nginx'
+  - ruleName: 'opentelemetry-collector'
+    baseRegistry: 'docker.io'
+    baseImage: 'otel/opentelemetry-collector-contrib'
+    destinationRepo: 'imported/otel/opentelemetry-collector-contrib'
+  - ruleName: 'node-exporter'
+    baseRegistry: 'docker.io'
+    baseImage: 'prom/node-exporter'
+    destinationRepo: 'imported/prom/node-exporter'
+  - ruleName: 'kube-slack'
+    baseRegistry: 'docker.io'
+    baseImage: 'willwill/kube-slack'
+    destinationRepo: 'imported/willwill/kube-slack'
+  - ruleName: 'jq-cache'
+    baseRegistry: 'ghcr.io'
+    baseImage: 'jqlang/jq'
+    destinationRepo: 'imported/jqlang/jq'
+  - ruleName: 'oathtool'
+    baseRegistry: 'docker.io'
+    baseImage: 'toolbelt/oathtool'
+    destinationRepo: 'imported/toolbelt/oathtool'
+  - ruleName: 'ryuk-cache'
+    baseRegistry: 'docker.io'
+    baseImage: 'testcontainers/ryuk'
+    destinationRepo: 'imported/testcontainers/ryuk'
+  - ruleName: 'alpine'
+    baseRegistry: 'docker.io'
+    baseImage: 'library/alpine'
+    destinationRepo: 'imported/alpine'
+  - ruleName: 'redis'
+    baseRegistry: 'docker.io'
+    baseImage: 'library/redis'
+    destinationRepo: 'imported/redis'
+  - ruleName: 'testcontainers-sshd'
+    baseRegistry: 'docker.io'
+    baseImage: 'testcontainers/sshd'
+    destinationRepo: 'imported/testcontainers/sshd'
+  - ruleName: 'williamyeh-java8'
+    baseRegistry: 'docker.io'
+    baseImage: 'williamyeh/java8'
+    destinationRepo: 'imported/williamyeh/java8'
+  - ruleName: 'azure-storage-azurite'
+    baseRegistry: 'mcr.microsoft.com'
+    baseImage: 'azure-storage/azurite'
+    destinationRepo: 'imported/azure-storage/azurite'
+  - ruleName: 'atmoz-sftp'
+    baseRegistry: 'docker.io'
+    baseImage: 'atmoz/sftp'
+    destinationRepo: 'imported/atmoz/sftp'
+  - ruleName: 'citizensadvice-clamav-mock'
+    baseRegistry: 'docker.io'
+    baseImage: 'citizensadvice/clamav-mock'
+    destinationRepo: 'imported/citizensadvice/clamav-mock'
+  - ruleName: 'library-ruby'
+    baseRegistry: 'docker.io'
+    baseImage: 'library/ruby'
+    destinationRepo: 'imported/library/ruby'
+  - ruleName: 'mikefarah-yq'
+    baseRegistry: 'docker.io'
+    baseImage: 'mikefarah/yq'
+    destinationRepo: 'imported/mikefarah/yq'
+  - ruleName: 'os-shell'
+    baseRegistry: 'docker.io'
+    baseImage: 'bitnami/os-shell'
+    destinationRepo: 'imported/os-shell'
+  - ruleName: 'wiremock'
+    baseRegistry: 'docker.io'
+    baseImage: 'wiremock/wiremock'
+    destinationRepo: 'imported/wiremock/wiremock'
+
 variables:
-  acrName: hmctspublic
-  targetRegistry: hmctspublic.azurecr.io
-  keyvaultName: 'infra-vault-prod'
-  serviceConnection: 'DCD-CNP-PROD'
-  # Trivy configuration
-  trivyVersion: '0.68.1'  # Latest stable release with improved vulnerability detection
-  severityThreshold: 'CRITICAL,HIGH'
-  trivyTimeout: '10m'
+- name: acrName
+  value: 'hmctspublic'
+- name: targetRegistry
+  value: 'hmctspublic.azurecr.io'
+- name: keyvaultName
+  value: 'infra-vault-prod'
+- name: serviceConnection
+  value: 'DCD-CNP-PROD'
+- name: trivyVersion
+  value: '0.68.1'
+- name: severityThreshold
+  value: 'CRITICAL,HIGH'
+- name: trivyTimeout
+  value: '10m'
 
 stages:
-- stage: ScanAndImport
-  displayName: 'Scan with Trivy and Import to ACR'
-  jobs:
-  - job: ScanAndImportImages
-    displayName: 'Scan with Trivy and Import to ACR'
-    timeoutInMinutes: 120  # 2 hours max - prevents hanging
-    pool:
-      name: hmcts-cftptl-agent-pool
+# Stage 1: Import base images
+- template: pipelines/base-image-import-stage.yml
+  parameters:
+    baseImagestoImport: ${{ parameters.baseImagestoImport }}
+    serviceConnection: $(serviceConnection)
+    keyvaultName: $(keyvaultName)
+    acrName: $(acrName)
+    trivyVersion: $(trivyVersion)
+    severityThreshold: $(severityThreshold)
+    trivyTimeout: $(trivyTimeout)
 
-    steps:
-    # Get secrets from Key Vault for ACR authentication and notifications
-    - task: AzureKeyVault@2
-      displayName: 'Get ACR credentials from Key Vault'
-      inputs:
-        azureSubscription: $(serviceConnection)
-        keyVaultName: $(keyvaultName)
-        secretsFilter: 'registry-public-username,registry-public-password,registry-slack-webhook'
-
-    # Setup Trivy scanner (install binary and update databases)
-    - template: templates/setup-trivy.yml
-      parameters:
-        trivyVersion: $(trivyVersion)
-
-    # Loop over each image using Azure DevOps native each loops
-    - ${{ each image in parameters.imagesToScan }}:
-      # Check if new version exists
-      - task: AzureCLI@2
-        displayName: 'Check version: ${{ image.baseImage }}:${{ image.baseTag }}'
-        name: check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
-        inputs:
-          azureSubscription: $(serviceConnection)
-          scriptType: bash
-          scriptLocation: scriptPath
-          scriptPath: check-base-tag.sh
-          arguments: >
-            --baseImage "${{ image.baseImage }}"
-            --baseRegistry "${{ image.baseRegistry }}"
-            --baseTag "${{ image.baseTag }}"
-            --targetImage "${{ image.targetImage }}"
-            --acrName "$(acrName)"
-
-      # Scan image with Trivy (only if new version found)
-      - template: templates/scan-image.yml
-        parameters:
-          baseRegistry: ${{ image.baseRegistry }}
-          baseImage: ${{ image.baseImage }}
-          baseTag: ${{ image.baseTag }}
-          severityThreshold: $(severityThreshold)
-          trivyTimeout: $(trivyTimeout)
-          taskNameSuffix: ${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
-          condition: eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true')
-
-      # Import to ACR (only if scan passed)
-      - template: templates/import-image.yml
-        parameters:
-          baseRegistry: ${{ image.baseRegistry }}
-          baseImage: ${{ image.baseImage }}
-          baseTag: ${{ image.baseTag }}
-          targetImage: ${{ image.targetImage }}
-          acrName: $(acrName)
-          serviceConnection: $(serviceConnection)
-          baseDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)
-          taskNameSuffix: ${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
-          condition: and(eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true'), eq(variables['scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true'))
-
-      # # Re-tag image
-      # - task: AzureCLI@2
-      #   displayName: 'Tag: ${{ image.baseImage }}:${{ image.baseTag }}'
-      #   condition: |
-      #     and(
-      #       eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true'),
-      #       eq(variables['scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true')
-      #     )
-      #   inputs:
-      #     azureSubscription: $(serviceConnection)
-      #     scriptType: bash
-      #     scriptLocation: scriptPath
-      #     scriptPath: tag-new-image.sh
-      #     arguments: >
-      #       --baseTag "${{ image.baseTag }}"
-      #       --targetImage "${{ image.targetImage }}"
-      #       --acrName "$(acrName)"
-      #       --targetRegistry "$(targetRegistry)"
-      #       --baseDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)"
-      #       --acrDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)"
-
-- stage: CreateCache
-  displayName: 'Create ACR Cache'
-  dependsOn: ScanAndImport
-  condition: succeeded()
-  jobs:
-  - job: CreateACRCache
-    displayName: 'Create ACR Cache'
-    pool:
-      vmImage: ubuntu-latest
-    steps:
-      - task: AzureCLI@2
-        displayName: 'Create ACR Cache'
-        inputs:
-          azureSubscription: $(serviceConnection)
-          scriptType: bash
-          scriptLocation: scriptPath
-          scriptPath: acr-cache.sh
+# Stage 2: Create and validate cache rules
+- template: pipelines/cache-rules-stage.yml
+  parameters:
+    cacheRulesToValidate: ${{ parameters.cacheRulesToValidate }}
+    serviceConnection: $(serviceConnection)
+    keyvaultName: $(keyvaultName)
+    acrName: $(acrName)
+    trivyVersion: $(trivyVersion)
+    severityThreshold: $(severityThreshold)
+    trivyTimeout: $(trivyTimeout)

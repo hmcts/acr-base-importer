@@ -19,9 +19,9 @@ parameters:
   type: string
   default: '10m'
   displayName: 'Trivy Timeout'
-- name: taskNameSuffix
+- name: taskName
   type: string
-  displayName: 'Task Name Suffix'
+  displayName: 'Task Name (must be unique in job)'
 - name: condition
   type: string
   default: 'true'
@@ -30,7 +30,7 @@ parameters:
 steps:
 - task: Bash@3
   displayName: 'Scan: ${{ parameters.baseImage }}:${{ parameters.baseTag }}'
-  name: scan_${{ parameters.taskNameSuffix }}
+  name: ${{ parameters.taskName }}
   condition: ${{ parameters.condition }}
   inputs:
     targetType: 'inline'

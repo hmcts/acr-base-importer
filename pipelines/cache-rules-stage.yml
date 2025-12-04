@@ -1,0 +1,117 @@
+#
+## Stage: Create ACR Cache Rules
+## Called by: trivy-scan-import.yml
+##
+parameters:
+- name: cacheRulesToValidate
+  type: object
+- name: serviceConnection
+  type: string
+  default: 'DCD-CNP-PROD'
+- name: keyvaultName
+  type: string
+  default: 'infra-vault-prod'
+- name: acrName
+  type: string
+  default: 'hmctspublic'
+- name: trivyVersion
+  type: string
+  default: '0.68.1'
+- name: severityThreshold
+  type: string
+  default: 'CRITICAL,HIGH'
+- name: trivyTimeout
+  type: string
+  default: '10m'
+
+stages:
+- stage: CreateCache
+  displayName: 'Create ACR Cache Rules'
+  jobs:
+  - job: ValidateAndCreateCacheRules
+    displayName: 'Scan Cache Rules and Create Rules'
+    timeoutInMinutes: 180  # 3 hours - scanning multiple repos takes time
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    # Get ACR credentials from Key Vault
+    - task: AzureKeyVault@2
+      displayName: 'Get ACR credentials from Key Vault'
+      inputs:
+        azureSubscription: ${{ parameters.serviceConnection }}
+        keyVaultName: ${{ parameters.keyvaultName }}
+        secretsFilter: 'registry-public-username,registry-public-password'
+
+    # Setup Trivy once for all cache rule scanning
+    - template: ../templates/setup-trivy.yml
+      parameters:
+        trivyVersion: ${{ parameters.trivyVersion }}
+
+    # Scan source repositories (latest tag) before creating cache rules
+    - ${{ each rule in parameters.cacheRulesToValidate }}:
+      # Scan the source repository for vulnerabilities
+      - template: ../templates/scan-image.yml
+        parameters:
+          baseRegistry: ${{ rule.baseRegistry }}
+          baseImage: ${{ rule.baseImage }}
+          baseTag: 'latest'
+          severityThreshold: ${{ parameters.severityThreshold }}
+          trivyTimeout: ${{ parameters.trivyTimeout }}
+          taskName: scan_source_${{ rule.ruleName }}
+          condition: 'true'
+
+      # Create ACR cache rules only if source image passed scanning
+      - task: AzureCLI@2
+        displayName: 'Create cache rule: ${{ rule.ruleName }}'
+        name: create_${{ rule.ruleName }}
+        condition: eq(variables['scan_source_${{ rule.ruleName }}.scanPassed'], 'true')
+        inputs:
+          azureSubscription: ${{ parameters.serviceConnection }}
+          scriptType: bash
+          scriptLocation: inline
+          script: |
+            set -e
+
+            echo "Creating cache rule: ${{ rule.ruleName }}"
+            echo "  Source: ${{ rule.baseRegistry }}/${{ rule.baseImage }}"
+            echo "  Destination: ${{ rule.destinationRepo }}"
+
+            # if az acr cache create \
+            #     -r ${{ parameters.acrName }} \
+            #     -n "${{ rule.ruleName }}" \
+            #     -s "${{ rule.baseRegistry }}/${{ rule.baseImage }}" \
+            #     -t "${{ rule.destinationRepo }}" \
+            #     -c dockerhub 2>&1; then
+            #   echo "✓ Created cache rule: ${{ rule.ruleName }}"
+            # else
+            #   echo "⚠ Could not create rule ${{ rule.ruleName }} (may already exist)"
+            # fi
+
+    # Check if destination images exist in ACR
+    - ${{ each rule in parameters.cacheRulesToValidate }}:
+      - task: AzureCLI@2
+        displayName: 'Check if cached image exists: ${{ rule.destinationRepo }}'
+        name: check_dest_${{ rule.ruleName }}
+        condition: 'true'
+        inputs:
+          azureSubscription: ${{ parameters.serviceConnection }}
+          scriptType: bash
+          scriptLocation: inline
+          script: |
+            set -e
+            if az acr repository show -n ${{ parameters.acrName }} -t "${{ rule.destinationRepo }}:latest" >/dev/null 2>&1; then
+              echo "##vso[task.setvariable variable=imageExists;isOutput=true]true"
+            else
+              echo "##vso[task.setvariable variable=imageExists;isOutput=true]false"
+            fi
+
+      # Scan destination image if it exists
+      - template: ../templates/scan-image.yml
+        parameters:
+          baseRegistry: ${{ parameters.acrName }}.azurecr.io
+          baseImage: ${{ rule.destinationRepo }}
+          baseTag: 'latest'
+          severityThreshold: ${{ parameters.severityThreshold }}
+          trivyTimeout: ${{ parameters.trivyTimeout }}
+          taskName: scan_dest_${{ rule.ruleName }}
+          condition: eq(variables['check_dest_${{ rule.ruleName }}.imageExists'], 'true')
