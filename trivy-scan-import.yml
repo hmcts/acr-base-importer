@@ -239,6 +239,7 @@ jobs:
           BASE_DIGEST="$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)"
 
           echo "Importing ${{ image.baseRegistry }}/${{ image.baseImage }}:${{ image.baseTag }}"
+          echo "Base digest: $BASE_DIGEST"
 
     # Re-tag image
     - task: AzureCLI@2
@@ -258,8 +259,8 @@ jobs:
           --targetImage "${{ image.targetImage }}"
           --acrName "$(acrName)"
           --targetRegistry "$(targetRegistry)"
-          --baseDigest "${{ variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest'] }}"
-          --acrDigest "${{ variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest'] }}"
+          --baseDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)"
+          --acrDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)"
 
   - job: CreateACRCache
     dependsOn: ScanAndImportImages
