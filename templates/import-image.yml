@@ -27,9 +27,6 @@ parameters:
   type: string
   default: ''
   displayName: 'Current ACR Image Digest (empty if first time import)'
-- name: targetRegistry
-  type: string
-  displayName: 'Target Registry (where imported image is stored)'
 - name: taskName
   type: string
   displayName: 'Task Name (must be unique in job)'
@@ -52,6 +49,6 @@ steps:
       --baseTag "${{ parameters.baseTag }}"
       --targetImage "${{ parameters.targetImage }}"
       --acrName "${{ parameters.acrName }}"
-      --targetRegistry "${{ parameters.targetRegistry }}"
+      --baseRegistry "${{ parameters.baseRegistry }}"
       --baseDigest "${{ parameters.baseDigest }}"
       --acrDigest "${{ parameters.acrDigest }}"

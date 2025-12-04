@@ -5,20 +5,20 @@ set -euo pipefail
 baseTag=
 targetImage=
 acrName=
-targetRegistry=
+baseRegistry=
 baseDigest=
 acrDigest=
 
 usage(){
 >&2 cat << EOF
 ------------------------------------------------
-Script to check if AKS cluster is active state
+Script to import image from source registry to ACR
 ------------------------------------------------
 Usage: $0
     [ -bt | --baseTag ]
     [ -ti | --targetImage ]
     [ -an | --acrName ]
-    [ -tr | --targetRegistry ]
+    [ -br | --baseRegistry ]
     [ -bd | --baseDigest ]
     [ -ad | --acrDigest ]
     [ -h | --help ]
@@ -26,7 +26,7 @@ EOF
 exit 1
 }
 
-args=$(getopt -a -o bt:ti:an:tr:bd:ad: --long baseTag:,targetImage:,acrName:,targetRegistry:,baseDigest:,acrDigest:,help -- "$@")
+args=$(getopt -a -o bt:ti:an:br:bd:ad: --long baseTag:,targetImage:,acrName:,baseRegistry:,baseDigest:,acrDigest:,help -- "$@")
 if [[ $? -gt 0 ]]; then
     usage
 fi
@@ -43,7 +43,7 @@ do
         -bt | --baseTag )        baseTag=$2             ; shift 2 ;;
         -ti | --targetImage )    targetImage=$2         ; shift 2 ;;
         -an | --acrName )        acrName=$2             ; shift 2 ;;
-        -tr | --targetRegistry ) targetRegistry=$2      ; shift 2 ;;
+        -br | --baseRegistry )   baseRegistry=$2        ; shift 2 ;;
         -bd | --baseDigest )     baseDigest=$2          ; shift 2 ;;
         -ad | --acrDigest )      acrDigest=$2           ; shift 2 ;;
         --) shift; break ;;
@@ -53,7 +53,7 @@ do
 done
 
 # Check if all arguments are provided (acrDigest can be empty for new images)
-if [ -z "$baseTag" ] || [ -z "$targetImage" ] || [ -z "$acrName" ] || [ -z "$targetRegistry" ] || [ -z "$baseDigest" ]; then
+if [ -z "$baseTag" ] || [ -z "$targetImage" ] || [ -z "$acrName" ] || [ -z "$baseRegistry" ] || [ -z "$baseDigest" ]; then
     echo "------------------------"
     echo 'Some values are missing, please supply all the required arguments' >&2
     echo "------------------------"
@@ -63,6 +63,6 @@ fi
 # Move base tag to new image
 [ "${acrDigest}" != "" ] && echo "Untagging previous ${baseTag} ..." && az acr repository untag -n ${acrName} --image ${targetImage}:${baseTag}
 
-echo "Tagging ${baseTag}-${baseDigest} as ${baseTag} ..."
-az acr import --name ${acrName} --source ${targetRegistry}/${targetImage}:${baseTag}-${baseDigest} --image ${targetImage}:${baseTag}
+echo "Importing ${baseRegistry}/${targetImage}:${baseTag} to ACR as ${baseTag} ..."
+az acr import --name ${acrName} --source ${baseRegistry}/${targetImage}:${baseTag} --image ${targetImage}:${baseTag}
 echo "Done."

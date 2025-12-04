@@ -88,6 +88,5 @@ stages:
           serviceConnection: ${{ parameters.serviceConnection }}
           baseDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)
           acrDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)
-          targetRegistry: ${{ parameters.acrName }}.azurecr.io
           taskName: import_base_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
           condition: eq(variables['scan_base_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true')
