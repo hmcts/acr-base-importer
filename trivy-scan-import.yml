@@ -262,16 +262,16 @@ jobs:
           --baseDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)"
           --acrDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)"
 
-  - job: CreateACRCache
-    dependsOn: ScanAndImportImages
-    condition: succeeded()
-    pool:
-      vmImage: ubuntu-latest
-    steps:
-      - task: AzureCLI@2
-        displayName: 'Create ACR Cache'
-        inputs:
-          azureSubscription: $(serviceConnection)
-          scriptType: bash
-          scriptLocation: scriptPath
-          scriptPath: acr-cache.sh
+- job: CreateACRCache
+  dependsOn: ScanAndImportImages
+  condition: succeeded()
+  pool:
+    vmImage: ubuntu-latest
+  steps:
+    - task: AzureCLI@2
+      displayName: 'Create ACR Cache'
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: scriptPath
+        scriptPath: acr-cache.sh
