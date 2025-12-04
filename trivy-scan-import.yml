@@ -72,80 +72,10 @@ jobs:
       keyVaultName: $(keyvaultName)
       secretsFilter: 'registry-public-username,registry-public-password,registry-slack-webhook'
 
-  # Install Trivy scanner
-  - task: Bash@3
-    displayName: 'Install Trivy Scanner'
-    inputs:
-      targetType: 'inline'
-      script: |
-        set -e
-        echo "Installing Trivy version $(trivyVersion)..."
-
-        # Download Trivy binary and checksums
-        wget -q https://github.com/aquasecurity/trivy/releases/download/v$(trivyVersion)/trivy_$(trivyVersion)_Linux-64bit.tar.gz
-        wget -q https://github.com/aquasecurity/trivy/releases/download/v$(trivyVersion)/trivy_$(trivyVersion)_checksums.txt
-
-        # Verify checksum
-        echo "Verifying checksum..."
-        grep "trivy_$(trivyVersion)_Linux-64bit.tar.gz" trivy_$(trivyVersion)_checksums.txt | sha256sum -c -
-
-        # Extract to current working directory
-        tar -xzf trivy_$(trivyVersion)_Linux-64bit.tar.gz
-
-        # Clean up
-        rm -f trivy_$(trivyVersion)_Linux-64bit.tar.gz trivy_$(trivyVersion)_checksums.txt
-
-        # Verify installation
-        ./trivy --version
-
-        echo "Trivy installed successfully"
-
-  # Update Trivy vulnerability database once for all scans
-  - task: Bash@3
-    displayName: 'Update Trivy vulnerability database'
-    inputs:
-      targetType: 'inline'
-      script: |
-        set -e
-
-        # Configure Trivy cache directory
-        export TRIVY_CACHE_DIR="${HOME}/.cache/trivy"
-        mkdir -p "$TRIVY_CACHE_DIR"
-
-        echo "Updating Trivy vulnerability database..."
-        # Retry up to 3 times with exponential backoff if database download fails
-        for i in 1 2 3; do
-          echo "Database download attempt $i of 3..."
-          if ./trivy image --download-db-only; then
-            echo "Vulnerability database updated successfully"
-            break
-          else
-            if [ $i -eq 3 ]; then
-              echo "##vso[task.logissue type=error]Failed to download vulnerability database after 3 attempts"
-              exit 1
-            fi
-            echo "Download failed, waiting before retry..."
-            sleep $((5 * i))  # Wait 5s, 10s, 15s
-          fi
-        done
-
-        echo "Updating Trivy Java database..."
-        # Download Java DB for scanning Java images
-        for i in 1 2 3; do
-          echo "Java DB download attempt $i of 3..."
-          if ./trivy image --download-java-db-only; then
-            echo "Java database updated successfully"
-            echo "Cache location: $TRIVY_CACHE_DIR"
-            break
-          else
-            if [ $i -eq 3 ]; then
-              echo "##vso[task.logissue type=error]Failed to download Java database after 3 attempts"
-              exit 1
-            fi
-            echo "Download failed, waiting before retry..."
-            sleep $((5 * i))  # Wait 5s, 10s, 15s
-          fi
-        done
+  # Setup Trivy scanner (install binary and update databases)
+  - template: templates/setup-trivy.yml
+    parameters:
+      trivyVersion: $(trivyVersion)
 
   # Loop over each image using Azure DevOps native each loops
   - ${{ each image in parameters.imagesToScan }}:
@@ -241,37 +171,37 @@ jobs:
           echo "Importing ${{ image.baseRegistry }}/${{ image.baseImage }}:${{ image.baseTag }}"
           echo "Base digest: $BASE_DIGEST"
 
-    # Re-tag image
-    - task: AzureCLI@2
-      displayName: 'Tag: ${{ image.baseImage }}:${{ image.baseTag }}'
-      condition: |
-        and(
-          eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true'),
-          eq(variables['scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true')
-        )
-      inputs:
-        azureSubscription: $(serviceConnection)
-        scriptType: bash
-        scriptLocation: scriptPath
-        scriptPath: tag-new-image.sh
-        arguments: >
-          --baseTag "${{ image.baseTag }}"
-          --targetImage "${{ image.targetImage }}"
-          --acrName "$(acrName)"
-          --targetRegistry "$(targetRegistry)"
-          --baseDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)"
-          --acrDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)"
+    # # Re-tag image
+    # - task: AzureCLI@2
+    #   displayName: 'Tag: ${{ image.baseImage }}:${{ image.baseTag }}'
+    #   condition: |
+    #     and(
+    #       eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true'),
+    #       eq(variables['scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true')
+    #     )
+    #   inputs:
+    #     azureSubscription: $(serviceConnection)
+    #     scriptType: bash
+    #     scriptLocation: scriptPath
+    #     scriptPath: tag-new-image.sh
+    #     arguments: >
+    #       --baseTag "${{ image.baseTag }}"
+    #       --targetImage "${{ image.targetImage }}"
+    #       --acrName "$(acrName)"
+    #       --targetRegistry "$(targetRegistry)"
+    #       --baseDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)"
+    #       --acrDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)"
 
-- job: CreateACRCache
-  dependsOn: ScanAndImportImages
-  condition: succeeded()
-  pool:
-    vmImage: ubuntu-latest
-  steps:
-    - task: AzureCLI@2
-      displayName: 'Create ACR Cache'
-      inputs:
-        azureSubscription: $(serviceConnection)
-        scriptType: bash
-        scriptLocation: scriptPath
-        scriptPath: acr-cache.sh
+# - job: CreateACRCache
+#   dependsOn: ScanAndImportImages
+#   condition: succeeded()
+#   pool:
+#     vmImage: ubuntu-latest
+#   steps:
+#     - task: AzureCLI@2
+#       displayName: 'Create ACR Cache'
+#       inputs:
+#         azureSubscription: $(serviceConnection)
+#         scriptType: bash
+#         scriptLocation: scriptPath
+#         scriptPath: acr-cache.sh
