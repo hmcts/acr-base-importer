@@ -96,80 +96,32 @@ jobs:
           --acrName "$(acrName)"
 
     # Scan image with Trivy (only if new version found)
-    - task: Bash@3
-      displayName: 'Scan: ${{ image.baseImage }}:${{ image.baseTag }}'
-      name: scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
+    - template: templates/scan-image.yml
+      parameters:
+        baseRegistry: ${{ image.baseRegistry }}
+        baseImage: ${{ image.baseImage }}
+        baseTag: ${{ image.baseTag }}
+        severityThreshold: $(severityThreshold)
+        trivyTimeout: $(trivyTimeout)
+        taskNameSuffix: ${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
       condition: eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true')
-      inputs:
-        targetType: 'inline'
-        script: |
-          set -e
-
-          IMAGE_TO_SCAN="${{ image.baseRegistry }}/${{ image.baseImage }}:${{ image.baseTag }}"
-          SAFE_NAME="${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}"
-
-          echo "Scanning: $IMAGE_TO_SCAN"
-
-          # Scan image and save JSON
-          ./trivy image \
-            --severity $(severityThreshold) \
-            --format json \
-            --timeout $(trivyTimeout) \
-            --ignore-unfixed \
-            --scanners vuln \
-            --output "trivy-report-${SAFE_NAME}.json" \
-            "$IMAGE_TO_SCAN"
-
-          # Parse vulnerabilities
-          REPORT_FILE="trivy-report-${SAFE_NAME}.json"
-          CRITICAL_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$REPORT_FILE")
-          HIGH_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$REPORT_FILE")
-
-          # Generate human-readable table
-          ./trivy convert \
-            --format table \
-            --output "trivy-scan-${SAFE_NAME}.txt" \
-            "$REPORT_FILE" || true
-
-          # Display table in console for readability
-          echo ""
-          echo "=== Vulnerability Scan Report ==="
-          cat "trivy-scan-${SAFE_NAME}.txt" || echo "Unable to display report"
-          echo "=================================="
-          echo ""
-
-          echo "Vulnerabilities: Critical=$CRITICAL_COUNT, High=$HIGH_COUNT"
-
-          # Determine pass/fail based on critical count
-          if [ "$CRITICAL_COUNT" -eq 0 ]; then
-            echo "##vso[task.setvariable variable=scanPassed;isOutput=true]true"
-            echo "✓ Scan passed - no critical vulnerabilities"
-          else
-            echo "##vso[task.setvariable variable=scanPassed;isOutput=true]false"
-            echo "##vso[task.logissue type=warning]Found $CRITICAL_COUNT critical vulnerabilities"
-            echo "✗ Scan failed - blocking import"
-            exit 1
-          fi
 
     # Import to ACR (only if scan passed)
-    - task: AzureCLI@2
-      displayName: 'Import: ${{ image.baseImage }}:${{ image.baseTag }}'
+    - template: templates/import-image.yml
+      parameters:
+        baseRegistry: ${{ image.baseRegistry }}
+        baseImage: ${{ image.baseImage }}
+        baseTag: ${{ image.baseTag }}
+        targetImage: ${{ image.targetImage }}
+        acrName: $(acrName)
+        serviceConnection: $(serviceConnection)
+        baseDigest: variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest']
+        taskNameSuffix: ${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
       condition: |
         and(
           eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true'),
           eq(variables['scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true')
         )
-      inputs:
-        azureSubscription: $(serviceConnection)
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          set -e
-
-          BASE_DIGEST="$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)"
-
-          echo "Importing ${{ image.baseRegistry }}/${{ image.baseImage }}:${{ image.baseTag }}"
-          echo "Base digest: $BASE_DIGEST"
 
     # # Re-tag image
     # - task: AzureCLI@2

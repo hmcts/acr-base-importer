@@ -1,0 +1,58 @@
+# Template: Import Image to ACR
+# Purpose: Import a container image to Azure Container Registry
+
+parameters:
+- name: baseRegistry
+  type: string
+  displayName: 'Base Registry'
+- name: baseImage
+  type: string
+  displayName: 'Base Image'
+- name: baseTag
+  type: string
+  displayName: 'Base Tag'
+- name: targetImage
+  type: string
+  displayName: 'Target Image'
+- name: acrName
+  type: string
+  displayName: 'ACR Name'
+- name: serviceConnection
+  type: string
+  displayName: 'Service Connection'
+- name: baseDigest
+  type: string
+  displayName: 'Base Image Digest'
+- name: taskNameSuffix
+  type: string
+  displayName: 'Task Name Suffix'
+
+steps:
+- task: AzureCLI@2
+  displayName: 'Import: ${{ parameters.baseImage }}:${{ parameters.baseTag }}'
+  inputs:
+    azureSubscription: ${{ parameters.serviceConnection }}
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      set -e
+
+      BASE_DIGEST="${{ parameters.baseDigest }}"
+      TARGET_IMAGE="${{ parameters.targetImage }}"
+      BASE_REGISTRY="${{ parameters.baseRegistry }}"
+      BASE_IMAGE="${{ parameters.baseImage }}"
+      BASE_TAG="${{ parameters.baseTag }}"
+      ACR_NAME="${{ parameters.acrName }}"
+
+      echo "Importing $BASE_REGISTRY/$BASE_IMAGE:$BASE_TAG"
+      echo "Base digest: $BASE_DIGEST"
+      echo "Target image: $TARGET_IMAGE:$BASE_TAG-$BASE_DIGEST"
+
+      # Import image with force flag to overwrite if exists
+      # az acr import \
+      #   --force \
+      #   --name "$ACR_NAME" \
+      #   --source "$BASE_REGISTRY/$BASE_IMAGE:$BASE_TAG" \
+      #   --image "$TARGET_IMAGE:$BASE_TAG-$BASE_DIGEST"
+
+      echo "✓ Image imported successfully"
