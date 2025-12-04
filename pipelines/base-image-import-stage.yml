@@ -77,16 +77,17 @@ stages:
           taskName: scan_base_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
           condition: eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true')
 
-      # Import to ACR (only if scan passed, which implies check found new tag)
+      # Import and re-tag new image as latest (only if scan passed)
       - template: ../templates/import-image.yml
         parameters:
-          baseRegistry: ${{ image.baseRegistry }}
           baseImage: ${{ image.baseImage }}
           baseTag: ${{ image.baseTag }}
+          baseRegistry: ${{ image.baseRegistry }}
           targetImage: ${{ image.targetImage }}
           acrName: ${{ parameters.acrName }}
           serviceConnection: ${{ parameters.serviceConnection }}
           baseDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)
           acrDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)
+          targetRegistry: ${{ parameters.acrName }}.azurecr.io
           taskName: import_base_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
           condition: eq(variables['scan_base_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true')

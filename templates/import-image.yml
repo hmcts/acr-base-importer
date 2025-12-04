@@ -27,6 +27,9 @@ parameters:
   type: string
   default: ''
   displayName: 'Current ACR Image Digest (empty if first time import)'
+- name: targetRegistry
+  type: string
+  displayName: 'Target Registry (ACR registry name, e.g. hmctspublic.azurecr.io)'
 - name: taskName
   type: string
   displayName: 'Task Name (must be unique in job)'
@@ -36,10 +39,24 @@ parameters:
   displayName: 'Task Condition'
 
 steps:
+# First import with digest-tagged version
 - task: AzureCLI@2
-  displayName: 'Import and tag: ${{ parameters.baseImage }}:${{ parameters.baseTag }}'
-  name: ${{ parameters.taskName }}
+  displayName: 'Import with digest tag: ${{ parameters.baseImage }}:${{ parameters.baseTag }}'
+  name: import_digest_${{ parameters.taskName }}
   condition: ${{ parameters.condition }}
+  inputs:
+    azureSubscription: ${{ parameters.serviceConnection }}
+    scriptType: bash
+    scriptLocation: inlineScript
+    script: |
+      echo "Importing ${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }} as ${{ parameters.targetImage }}:${{ parameters.baseTag }}-${{ parameters.baseDigest }} ..."
+      az acr import --force --name ${{ parameters.acrName }} --source ${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }} --image ${{ parameters.targetImage }}:${{ parameters.baseTag }}-${{ parameters.baseDigest }}
+
+# Re-tag as latest (only if first import succeeded)
+- task: AzureCLI@2
+  displayName: 'Re-tag as latest: ${{ parameters.baseImage }}:${{ parameters.baseTag }}'
+  name: ${{ parameters.taskName }}
+  condition: succeeded()
   inputs:
     azureSubscription: ${{ parameters.serviceConnection }}
     scriptType: bash
@@ -49,6 +66,6 @@ steps:
       --baseTag "${{ parameters.baseTag }}"
       --targetImage "${{ parameters.targetImage }}"
       --acrName "${{ parameters.acrName }}"
-      --baseRegistry "${{ parameters.baseRegistry }}"
+      --targetRegistry "${{ parameters.targetRegistry }}"
       --baseDigest "${{ parameters.baseDigest }}"
       --acrDigest "${{ parameters.acrDigest }}"
