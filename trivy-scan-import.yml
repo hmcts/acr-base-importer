@@ -82,66 +82,66 @@ stages:
 
     # Loop over each image using Azure DevOps native each loops
     - ${{ each image in parameters.imagesToScan }}:
-    # Check if new version exists
-    - task: AzureCLI@2
-      displayName: 'Check version: ${{ image.baseImage }}:${{ image.baseTag }}'
-      name: check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
-      inputs:
-        azureSubscription: $(serviceConnection)
-        scriptType: bash
-        scriptLocation: scriptPath
-        scriptPath: check-base-tag.sh
-        arguments: >
-          --baseImage "${{ image.baseImage }}"
-          --baseRegistry "${{ image.baseRegistry }}"
-          --baseTag "${{ image.baseTag }}"
-          --targetImage "${{ image.targetImage }}"
-          --acrName "$(acrName)"
+      # Check if new version exists
+      - task: AzureCLI@2
+        displayName: 'Check version: ${{ image.baseImage }}:${{ image.baseTag }}'
+        name: check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
+        inputs:
+          azureSubscription: $(serviceConnection)
+          scriptType: bash
+          scriptLocation: scriptPath
+          scriptPath: check-base-tag.sh
+          arguments: >
+            --baseImage "${{ image.baseImage }}"
+            --baseRegistry "${{ image.baseRegistry }}"
+            --baseTag "${{ image.baseTag }}"
+            --targetImage "${{ image.targetImage }}"
+            --acrName "$(acrName)"
 
-    # Scan image with Trivy (only if new version found)
-    - template: templates/scan-image.yml
-      parameters:
-        baseRegistry: ${{ image.baseRegistry }}
-        baseImage: ${{ image.baseImage }}
-        baseTag: ${{ image.baseTag }}
-        severityThreshold: $(severityThreshold)
-        trivyTimeout: $(trivyTimeout)
-        taskNameSuffix: ${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
-        condition: eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true')
+      # Scan image with Trivy (only if new version found)
+      - template: templates/scan-image.yml
+        parameters:
+          baseRegistry: ${{ image.baseRegistry }}
+          baseImage: ${{ image.baseImage }}
+          baseTag: ${{ image.baseTag }}
+          severityThreshold: $(severityThreshold)
+          trivyTimeout: $(trivyTimeout)
+          taskNameSuffix: ${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
+          condition: eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true')
 
-    # Import to ACR (only if scan passed)
-    - template: templates/import-image.yml
-      parameters:
-        baseRegistry: ${{ image.baseRegistry }}
-        baseImage: ${{ image.baseImage }}
-        baseTag: ${{ image.baseTag }}
-        targetImage: ${{ image.targetImage }}
-        acrName: $(acrName)
-        serviceConnection: $(serviceConnection)
-        baseDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)
-        taskNameSuffix: ${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
-        condition: and(eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true'), eq(variables['scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true'))
+      # Import to ACR (only if scan passed)
+      - template: templates/import-image.yml
+        parameters:
+          baseRegistry: ${{ image.baseRegistry }}
+          baseImage: ${{ image.baseImage }}
+          baseTag: ${{ image.baseTag }}
+          targetImage: ${{ image.targetImage }}
+          acrName: $(acrName)
+          serviceConnection: $(serviceConnection)
+          baseDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)
+          taskNameSuffix: ${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
+          condition: and(eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true'), eq(variables['scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true'))
 
-    # # Re-tag image
-    # - task: AzureCLI@2
-    #   displayName: 'Tag: ${{ image.baseImage }}:${{ image.baseTag }}'
-    #   condition: |
-    #     and(
-    #       eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true'),
-    #       eq(variables['scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true')
-    #     )
-    #   inputs:
-    #     azureSubscription: $(serviceConnection)
-    #     scriptType: bash
-    #     scriptLocation: scriptPath
-    #     scriptPath: tag-new-image.sh
-    #     arguments: >
-    #       --baseTag "${{ image.baseTag }}"
-    #       --targetImage "${{ image.targetImage }}"
-    #       --acrName "$(acrName)"
-    #       --targetRegistry "$(targetRegistry)"
-    #       --baseDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)"
-    #       --acrDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)"
+      # # Re-tag image
+      # - task: AzureCLI@2
+      #   displayName: 'Tag: ${{ image.baseImage }}:${{ image.baseTag }}'
+      #   condition: |
+      #     and(
+      #       eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true'),
+      #       eq(variables['scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true')
+      #     )
+      #   inputs:
+      #     azureSubscription: $(serviceConnection)
+      #     scriptType: bash
+      #     scriptLocation: scriptPath
+      #     scriptPath: tag-new-image.sh
+      #     arguments: >
+      #       --baseTag "${{ image.baseTag }}"
+      #       --targetImage "${{ image.targetImage }}"
+      #       --acrName "$(acrName)"
+      #       --targetRegistry "$(targetRegistry)"
+      #       --baseDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)"
+      #       --acrDigest "$(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)"
 
 - stage: CreateCache
   displayName: 'Create ACR Cache'
