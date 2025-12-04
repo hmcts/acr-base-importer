@@ -68,7 +68,7 @@ stages:
         inputs:
           azureSubscription: ${{ parameters.serviceConnection }}
           scriptType: bash
-          scriptLocation: inline
+          scriptLocation: inlineScript
           script: |
             set -e
 
@@ -96,7 +96,7 @@ stages:
         inputs:
           azureSubscription: ${{ parameters.serviceConnection }}
           scriptType: bash
-          scriptLocation: inline
+          scriptLocation: inlineScript
           script: |
             set -e
             if az acr repository show -n ${{ parameters.acrName }} -t "${{ rule.destinationRepo }}:latest" >/dev/null 2>&1; then
