@@ -52,7 +52,7 @@ variables:
   keyvaultName: 'infra-vault-prod'
   serviceConnection: 'DCD-CNP-PROD'
   # Trivy configuration
-  trivyVersion: '0.58.1'  # Specify Trivy version for consistency
+  trivyVersion: '0.68.1'  # Latest stable release with improved vulnerability detection
   severityThreshold: 'CRITICAL,HIGH'
   trivyTimeout: '10m'
 
@@ -150,12 +150,13 @@ jobs:
   # Loop over each image using Azure DevOps native each loops
   - ${{ each image in parameters.imagesToScan }}:
     # Check if new version exists
-    - task: AzureCLI@1
+    - task: AzureCLI@2
       displayName: 'Check version: ${{ image.baseImage }}:${{ image.baseTag }}'
       name: check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
       inputs:
         azureSubscription: $(serviceConnection)
-        scriptLocation: 'scriptPath'
+        scriptType: bash
+        scriptLocation: scriptPath
         scriptPath: check-base-tag.sh
         arguments: >
           --baseImage "${{ image.baseImage }}"
@@ -169,7 +170,6 @@ jobs:
       displayName: 'Scan: ${{ image.baseImage }}:${{ image.baseTag }}'
       name: scan_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
       condition: eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true')
-      continueOnError: true
       inputs:
         targetType: 'inline'
         script: |
@@ -222,7 +222,7 @@ jobs:
           fi
 
     # Import to ACR (only if scan passed)
-    - task: AzureCLI@1
+    - task: AzureCLI@2
       displayName: 'Import: ${{ image.baseImage }}:${{ image.baseTag }}'
       condition: |
         and(
@@ -231,7 +231,8 @@ jobs:
         )
       inputs:
         azureSubscription: $(serviceConnection)
-        scriptLocation: 'inlineScript'
+        scriptType: bash
+        scriptLocation: inlineScript
         inlineScript: |
           set -e
 
@@ -240,7 +241,7 @@ jobs:
           echo "Importing ${{ image.baseRegistry }}/${{ image.baseImage }}:${{ image.baseTag }}"
 
     # Re-tag image
-    - task: AzureCLI@1
+    - task: AzureCLI@2
       displayName: 'Tag: ${{ image.baseImage }}:${{ image.baseTag }}'
       condition: |
         and(
@@ -249,7 +250,8 @@ jobs:
         )
       inputs:
         azureSubscription: $(serviceConnection)
-        scriptLocation: 'scriptPath'
+        scriptType: bash
+        scriptLocation: scriptPath
         scriptPath: tag-new-image.sh
         arguments: >
           --baseTag "${{ image.baseTag }}"
@@ -265,9 +267,10 @@ jobs:
     pool:
       vmImage: ubuntu-latest
     steps:
-      - task: AzureCLI@1
+      - task: AzureCLI@2
         displayName: 'Create ACR Cache'
         inputs:
           azureSubscription: $(serviceConnection)
-          scriptLocation: 'scriptPath'
+          scriptType: bash
+          scriptLocation: scriptPath
           scriptPath: acr-cache.sh
