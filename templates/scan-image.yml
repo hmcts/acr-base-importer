@@ -38,7 +38,7 @@ steps:
       set -e
 
       IMAGE_TO_SCAN="${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }}"
-      SAFE_NAME="${{ parameters.taskNameSuffix }}"
+      SAFE_NAME="${{ parameters.taskName }}"
 
       echo "Scanning: $IMAGE_TO_SCAN"
 
