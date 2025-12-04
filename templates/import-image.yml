@@ -47,7 +47,7 @@ steps:
     azureSubscription: ${{ parameters.serviceConnection }}
     scriptType: bash
     scriptLocation: scriptPath
-    scriptPath: ../scripts/tag-new-image.sh
+    scriptPath: $(System.DefaultWorkingDirectory)/scripts/tag-new-image.sh
     arguments: >
       --baseTag "${{ parameters.baseTag }}"
       --targetImage "${{ parameters.targetImage }}"

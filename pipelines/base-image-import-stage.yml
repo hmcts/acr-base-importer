@@ -58,7 +58,7 @@ stages:
           azureSubscription: ${{ parameters.serviceConnection }}
           scriptType: bash
           scriptLocation: scriptPath
-          scriptPath: ../scripts/check-base-tag.sh
+          scriptPath: $(System.DefaultWorkingDirectory)/scripts/check-base-tag.sh
           arguments: >
             --baseImage "${{ image.baseImage }}"
             --baseRegistry "${{ image.baseRegistry }}"
