@@ -1,7 +1,7 @@
 # Template: Setup Trivy Scanner
 # Purpose: Install Trivy and update vulnerability databases
 # This template handles one-time setup for scanning tasks
-# 
+#
 # Usage:
 #   - template: acr-base-importer/templates/setup-trivy.yml
 #     parameters:
@@ -12,7 +12,6 @@ parameters:
   type: string
   default: '0.68.1'
   displayName: 'Trivy Version'
-  description: 'Version of Trivy to install (e.g., 0.68.1)'
 
 steps:
 # Install Trivy scanner binary
