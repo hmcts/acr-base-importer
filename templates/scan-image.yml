@@ -22,11 +22,16 @@ parameters:
 - name: taskNameSuffix
   type: string
   displayName: 'Task Name Suffix'
+- name: condition
+  type: string
+  default: 'true'
+  displayName: 'Task Condition'
 
 steps:
 - task: Bash@3
   displayName: 'Scan: ${{ parameters.baseImage }}:${{ parameters.baseTag }}'
   name: scan_${{ parameters.taskNameSuffix }}
+  condition: ${{ parameters.condition }}
   inputs:
     targetType: 'inline'
     script: |

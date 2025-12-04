@@ -26,10 +26,15 @@ parameters:
 - name: taskNameSuffix
   type: string
   displayName: 'Task Name Suffix'
+- name: condition
+  type: string
+  default: 'true'
+  displayName: 'Task Condition'
 
 steps:
 - task: AzureCLI@2
   displayName: 'Import: ${{ parameters.baseImage }}:${{ parameters.baseTag }}'
+  condition: ${{ parameters.condition }}
   inputs:
     azureSubscription: ${{ parameters.serviceConnection }}
     scriptType: bash
