@@ -29,7 +29,7 @@ parameters:
 
 steps:
 - task: Bash@3
-  displayName: 'Scan: ${{ parameters.baseImage }}:${{ parameters.baseTag }}'
+  displayName: 'Scanning: ${{ parameters.baseImage }}'
   name: ${{ parameters.taskName }}
   condition: ${{ parameters.condition }}
   inputs:
