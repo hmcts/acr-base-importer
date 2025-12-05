@@ -94,7 +94,9 @@ if [[ "$acrDigest" == "" || "$acrDigest" != "$sourceDigest" ]]; then
     # Import needed (image missing or digest mismatch)
     echo "##vso[task.setvariable variable=newTagFound;isOutput=true]true"
     echo "##vso[task.setvariable variable=acrDigest;isOutput=true]$acrDigest"
-    echo "##vso[task.setvariable variable=sourceDigest;isOutput=true]${sourceDigest:7:6}"
+    shortenedSourceDigest="${sourceDigest:7:6}"
+    echo "[DEBUG] shortDigest to set: $shortenedSourceDigest"
+    echo "##vso[task.setvariable variable=sourceDigest;isOutput=true]$shortenedSourceDigest"
 else
     echo "Nothing to import for ${sourceRegistry}/${sourceImage}."
     exit 0
@@ -111,7 +113,7 @@ echo "targetImage: $targetImage"
 echo "tag: $tag"
 echo "sourceDigestRaw: $sourceDigestRaw"
 echo "sourceDigest: $sourceDigest"
-echo "sourceDigest (short): ${sourceDigest:7:6}"
+echo "sourceDigest (short): $shortenedSourceDigest"
 echo "acrDigestRaw: $acrDigestRaw"
 echo "acrDigest: $acrDigest"
 echo "--- End Variable Summary ---"
