@@ -77,7 +77,7 @@ stages:
 
       # Check if destination images exist in ACR
       - task: AzureCLI@2
-        displayName: 'Check if cached latest tag exists: ${{ rule.destinationRepo }}'
+        displayName: 'Check if cached image exists: ${{ rule.destinationRepo }}'
         name: check_dest_${{ replace(rule.ruleName, '-', '_') }}
         inputs:
           azureSubscription: ${{ parameters.serviceConnection }}
@@ -85,10 +85,32 @@ stages:
           scriptLocation: inlineScript
           inlineScript: |
             set -e
-            if az acr repository show -n ${{ parameters.acrName }} -t "${{ rule.destinationRepo }}:latest" >/dev/null 2>&1; then
-              echo "##vso[task.setvariable variable=imageExists;isOutput=true]true"
-            else
+            REPO="${{ rule.destinationRepo }}"
+
+            # Get all tags for the repository
+            TAGS_JSON=$(az acr repository show-tags -n ${{ parameters.acrName }} --repository "$REPO" -o json 2>/dev/null)
+
+            if [ -z "$TAGS_JSON" ] || [ "$TAGS_JSON" == "[]" ]; then
+              echo "##vso[task.logissue type=warning]No tags found for $REPO - skipping scan"
               echo "##vso[task.setvariable variable=imageExists;isOutput=true]false"
+            else
+              # First try to find 'latest' tag
+              if echo "$TAGS_JSON" | jq -e '.[] | select(. == "latest")' >/dev/null 2>&1; then
+                echo "##vso[task.setvariable variable=tagToScan;isOutput=true]latest"
+                echo "##vso[task.setvariable variable=imageExists;isOutput=true]true"
+              else
+                # Fallback: Get the most recently modified tag from manifests
+                MOST_RECENT_TAG=$(az acr repository show-manifests -n ${{ parameters.acrName }} --repository "$REPO" -o json 2>/dev/null | jq -r 'sort_by(.lastUpdateTime) | reverse | .[0].tags | .[]')
+
+                if [ -z "$MOST_RECENT_TAG" ] || [ "$MOST_RECENT_TAG" == "null" ]; then
+                  echo "##vso[task.logissue type=warning]Could not determine tag for $REPO - skipping scan"
+                  echo "##vso[task.setvariable variable=imageExists;isOutput=true]false"
+                else
+                  echo "⚠ No 'latest' tag found, using most recent tag: $MOST_RECENT_TAG"
+                  echo "##vso[task.setvariable variable=tagToScan;isOutput=true]$MOST_RECENT_TAG"
+                  echo "##vso[task.setvariable variable=imageExists;isOutput=true]true"
+                fi
+              fi
             fi
 
       # Scan destination image if it exists
@@ -96,7 +118,7 @@ stages:
         parameters:
           baseRegistry: ${{ parameters.acrName }}.azurecr.io
           baseImage: ${{ rule.destinationRepo }}
-          baseTag: 'latest'
+          baseTag: ${{ variables['check_dest_${{ replace(rule.ruleName, '-', '_') }}.tagToScan'] }}
           severityThreshold: ${{ parameters.severityThreshold }}
           trivyTimeout: ${{ parameters.trivyTimeout }}
           taskName: scan_dest_${{ replace(rule.ruleName, '-', '_') }}
