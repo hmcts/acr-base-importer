@@ -57,7 +57,7 @@ stages:
           azureSubscription: ${{ parameters.serviceConnection }}
           scriptType: bash
           scriptLocation: inlineScript
-          script: |
+          inlineScript: |
             set -e
 
             echo "Creating cache rule: ${{ rule.ruleName }}"
@@ -83,7 +83,7 @@ stages:
           azureSubscription: ${{ parameters.serviceConnection }}
           scriptType: bash
           scriptLocation: inlineScript
-          script: |
+          inlineScript: |
             set -e
             if az acr repository show -n ${{ parameters.acrName }} -t "${{ rule.destinationRepo }}:latest" >/dev/null 2>&1; then
               echo "##vso[task.setvariable variable=imageExists;isOutput=true]true"
