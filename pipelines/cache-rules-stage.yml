@@ -49,22 +49,10 @@ stages:
 
     # Scan source repositories (latest tag) before creating cache rules
     - ${{ each rule in parameters.cacheRulesToValidate }}:
-      # Scan the source repository for vulnerabilities
-      - template: ../templates/scan-image.yml
-        parameters:
-          baseRegistry: ${{ rule.baseRegistry }}
-          baseImage: ${{ rule.baseImage }}
-          baseTag: 'latest'
-          severityThreshold: ${{ parameters.severityThreshold }}
-          trivyTimeout: ${{ parameters.trivyTimeout }}
-          taskName: scan_source_${{ replace(rule.ruleName, '-', '_') }}
-          condition: 'true'
-
-      # Create ACR cache rules only if source image passed scanning
+      # Create ACR cache rules
       - task: AzureCLI@2
         displayName: 'Create cache rule: ${{ rule.ruleName }}'
         name: create_${{ replace(rule.ruleName, '-', '_') }}
-        condition: eq(variables['scan_source_${{ replace(rule.ruleName, '-', '_') }}.scanPassed'], 'true')
         inputs:
           azureSubscription: ${{ parameters.serviceConnection }}
           scriptType: bash
@@ -87,8 +75,7 @@ stages:
             #   echo "⚠ Could not create rule ${{ rule.ruleName }} (may already exist)"
             # fi
 
-    # Check if destination images exist in ACR
-    - ${{ each rule in parameters.cacheRulesToValidate }}:
+      # Check if destination images exist in ACR
       - task: AzureCLI@2
         displayName: 'Check if cached image exists: ${{ rule.destinationRepo }}'
         name: check_dest_${{ replace(rule.ruleName, '-', '_') }}

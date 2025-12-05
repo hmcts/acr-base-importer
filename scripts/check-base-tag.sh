@@ -71,8 +71,15 @@ fi
 # Get current digest from target azure registry
 echo "Base registry current digest for ${baseImage}:${baseTag}: [${_digest}]"
 
-_acr_digest=$(az acr manifest list-metadata --registry $acrName --name $targetImage \
- --query "[?not_null(tags[])]|[?contains(tags, \`\"${baseTag}\"\`)].digest|[0]" -o tsv || echo "")
+# Get the manifest from ACR and extract the amd64 platform digest directly
+_acr_manifest=$(az acr manifest show --registry $acrName --name $targetImage -o json 2>/dev/null || echo "")
+
+# Extract the amd64 platform digest from the manifest
+if [ -n "$_acr_manifest" ] && [ "$_acr_manifest" != "" ]; then
+  _acr_digest=$(echo $_acr_manifest | jq -r '.manifests[] | select (.platform.architecture == "amd64") | .digest' 2>/dev/null || echo "")
+else
+  _acr_digest=""
+fi
 
 echo "Target registry current digest for ${baseImage}:${baseTag}: [${_acr_digest}]"
 
