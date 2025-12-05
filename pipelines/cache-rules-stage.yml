@@ -118,7 +118,7 @@ stages:
         parameters:
           baseRegistry: ${{ parameters.acrName }}.azurecr.io
           baseImage: ${{ rule.destinationRepo }}
-          baseTag: ${{ variables['check_dest_${{ replace(rule.ruleName, '-', '_') }}.tagToScan'] }}
+          baseTag: $[variables['check_dest_${{ replace(rule.ruleName, '-', '_') }}.tagToScan']]
           severityThreshold: ${{ parameters.severityThreshold }}
           trivyTimeout: ${{ parameters.trivyTimeout }}
           taskName: scan_dest_${{ replace(rule.ruleName, '-', '_') }}
