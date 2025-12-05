@@ -4,162 +4,202 @@ rules:
   postgresql:
     ruleName: postgresql
     repoName: bitnami/postgresql
+    registry: docker.io
     destinationRepo: imported/bitnami/postgresql
   postgres-exporter:
     ruleName: postgres-exporter
     repoName: bitnami/postgres-exporter
+    registry: docker.io
     destinationRepo: imported/postgres-exporter
   postgres:
     ruleName: postgres
     repoName: library/postgres
+    registry: docker.io
     destinationRepo: imported/postgres
   postgresql-client:
     ruleName: postgresql-client
     repoName: jbergknoff/postgresql-client
+    registry: docker.io
     destinationRepo: imported/jbergknoff/postgresql-client
   curl:
     ruleName: curl-cache
     repoName: curlimages/curl
+    registry: docker.io
     destinationRepo: imported/curlimages/curl
   elastic-search:
     ruleName: elastic-search
     repoName: elasticsearch/elasticsearch
+    registry: docker.io
     destinationRepo: imported/elastic/elasticsearch
   external-dns:
     ruleName: external-dns
     repoName: bitnami/external-dns
+    registry: docker.io
     destinationRepo: imported/bitnami/external-dns
   kubectl:
     ruleName: kubectl
     repoName: bitnami/kubectl
+    registry: docker.io
     destinationRepo: imported/bitnami/kubectl
   bitnami-redis:
     ruleName: bitnami-redis
     repoName: bitnami/redis
+    registry: docker.io
     destinationRepo: imported/bitnami/redis
   bitnami-redis-exporter:
     ruleName: bitnami-redis-exporter
     repoName: bitnami/redis-exporter
+    registry: docker.io
     destinationRepo: imported/bitnami/redis-exporter
   bitnami-redis-sentinel:
     ruleName: bitnami-redis-sentinel
     repoName: bitnami/redis-sentinel
+    registry: docker.io
     destinationRepo: imported/bitnami/redis-sentinel
   pact-broker:
     ruleName: pact-broker
     repoName: dius/pact-broker
+    registry: docker.io
     destinationRepo: imported/dius/pact-broker
   tel2:
     ruleName: datawire-tel2
     repoName: datawire/tel2
+    registry: docker.io
     destinationRepo: imported/datawire/tel2
   service-catalog:
     ruleName: service-catalog
     repoName: drycc/service-catalog
+    registry: docker.io
     destinationRepo: imported/drycc/service-catalog
   dynatrace-operator:
     ruleName: dynatrace-operator
     repoName: dynatrace/dynatrace-operator
+    registry: docker.io
     destinationRepo: imported/dynatrace/dynatrace-operator
   fluent-bit:
     ruleName: fluent-bit
     repoName: fluent/fluent-bit
+    registry: docker.io
     destinationRepo: imported/fluent/fluent-bit
   grafana:
     ruleName: grafana
     repoName: grafana/grafana
+    registry: docker.io
     destinationRepo: imported/grafana
   testkube-api-server:
     ruleName: testkube-api-server
     repoName: kubeshop/testkube-api-server
+    registry: docker.io
     destinationRepo: imported/kubeshop/testkube-api-server
   testkube-dashboard:
     ruleName: testkube-dashboard
     repoName: kubeshop/testkube-dashboard
+    registry: docker.io
     destinationRepo: imported/kubeshop/testkube-dashboard
   testkube-operator:
     ruleName: testkube-operator
     repoName: kubeshop/testkube-operator
+    registry: docker.io
     destinationRepo: imported/kubeshop/testkube-operator
   minio:
     ruleName: minio
     repoName: minio/minio
+    registry: docker.io
     destinationRepo: imported/minio/minio
   neuvector-controller:
     ruleName: neuvector-controller
     repoName: neuvector/controller
+    registry: docker.io
     destinationRepo: imported/neuvector/controller
   neuvector-enforcer:
     ruleName: neuvector-enforcer
     repoName: neuvector/enforcer
+    registry: docker.io
     destinationRepo: imported/neuvector/enforcer
   neuvector-manager:
     ruleName: neuvector-manager
     repoName: neuvector/manager
+    registry: docker.io
     destinationRepo: imported/neuvector/manager
   neuvector-scanner:
     ruleName: neuvector-scanner
     repoName: neuvector/scanner
+    registry: docker.io
     destinationRepo: imported/neuvector/scanner
   neuvector-updater:
     ruleName: neuvector-updater
     repoName: neuvector/updater
+    registry: docker.io
     destinationRepo: imported/neuvector/updater
   traefik:
     ruleName: traefik
     repoName: library/traefik
+    registry: docker.io
     destinationRepo: imported/traefik
   configmap-reload:
     ruleName: configmap-reload
     repoName: jimmidyson/configmap-reload
+    registry: docker.io
     destinationRepo: imported/jimmidyson/configmap-reload
   k8s-sidecar:
     ruleName: k8s-sidecar
     repoName: kiwigrid/k8s-sidecar
+    registry: docker.io
     destinationRepo: imported/kiwigrid/k8s-sidecar
   openssh-server:
     ruleName: openssh-server
     repoName: linuxserver/openssh-server
+    registry: docker.io
     destinationRepo: imported/linuxserver/openssh-server
   mailhog:
     ruleName: mailhog
     repoName: mailhog/mailhog
+    registry: docker.io
     destinationRepo: imported/mailhog/mailhog
   nats:
     ruleName: nats-rule
     repoName: library/nats
+    registry: docker.io
     destinationRepo: imported/nats
   nats-server-config-reloader:
     ruleName: nats-server-config-reloader
     repoName: natsio/nats-server-config-reloader
+    registry: docker.io
     destinationRepo: imported/natsio/nats-server-config-reloader
   prometheus-nats-exporter:
     ruleName: prometheus-nats-exporter
     repoName: natsio/prometheus-nats-exporter
+    registry: docker.io
     destinationRepo: imported/natsio/prometheus-nats-exporter
   netbox:
     ruleName: netbox
     repoName: netboxcommunity/netbox
+    registry: docker.io
     destinationRepo: imported/netboxcommunity/netbox
   nodejs:
     ruleName: nodejs
     repoName: library/node
+    registry: docker.io
     destinationRepo: imported/library/node
   nginx:
     ruleName: nginx
     repoName: library/nginx
+    registry: docker.io
     destinationRepo: imported/nginx
   opentelemtry-collector:
     ruleName: opentelemetry-collector
     repoName: otel/opentelemetry-collector-contrib
+    registry: docker.io
     destinationRepo: imported/otel/opentelemetry-collector-contrib
   node-exporter:
     ruleName: node-exporter
     repoName: prom/node-exporter
+    registry: docker.io
     destinationRepo: imported/prom/node-exporter
   kube-slack:
     ruleName: kube-slack
     repoName: willwill/kube-slack
+    registry: docker.io
     destinationRepo: imported/willwill/kube-slack
   jq:
     ruleName: jq-cache
@@ -169,26 +209,32 @@ rules:
   oathtool:
     ruleName: oathtool
     repoName: toolbelt/oathtool
+    registry: docker.io
     destinationRepo: imported/toolbelt/oathtool
   ryuk:
     ruleName: ryuk-cache
     repoName: testcontainers/ryuk
+    registry: docker.io
     destinationRepo: imported/testcontainers/ryuk
   alpine:
     ruleName: alpine
     repoName: library/alpine
+    registry: docker.io
     destinationRepo: imported/alpine
   redis:
     ruleName: redis
     repoName: library/redis
+    registry: docker.io
     destinationRepo: imported/redis
   testcontainers-sshd:
     ruleName: testcontainers-sshd
     repoName: testcontainers/sshd
+    registry: docker.io
     destinationRepo: imported/testcontainers/sshd
   williamyeh-java8:
     ruleName: williamyeh-java8
     repoName: williamyeh/java8
+    registry: docker.io
     destinationRepo: imported/williamyeh/java8
   azurite:
     ruleName: azure-storage-azurite
@@ -198,24 +244,30 @@ rules:
   sftp:
     ruleName: atmoz-sftp
     repoName: atmoz/sftp
+    registry: docker.io
     destinationRepo: imported/atmoz/sftp
   clamav:
     ruleName: citizensadvice-clamav-mock
     repoName: citizensadvice/clamav-mock
+    registry: docker.io
     destinationRepo: imported/citizensadvice/clamav-mock
   ruby:
     ruleName: library-ruby
     repoName: library/ruby
+    registry: docker.io
     destinationRepo: imported/library/ruby
   mikefarah-yq:
     ruleName: mikefarah-yq
     repoName: mikefarah/yq
+    registry: docker.io
     destinationRepo: imported/mikefarah/yq
   os-shell:
     ruleName: os-shell
     repoName: bitnami/os-shell
+    registry: docker.io
     destinationRepo: imported/os-shell
   wiremock:
     ruleName: wiremock
     repoName: wiremock/wiremock
+    registry: docker.io
     destinationRepo: imported/wiremock/wiremock

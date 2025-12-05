@@ -89,9 +89,12 @@ echo "Target registry wrapper digest for ${targetImage}:${tag}: [${acrDigest}]"
 ################################################
 ### Compare digests and set output variables
 ################################################
-[[ "$acrDigest" != "" && "$acrDigest" == "$sourceDigest" ]] && echo "Nothing to import for ${sourceRegistry}/${sourceImage}." && exit 0
-
-# Export variables for next stages (with isOutput=true to make them available to other tasks)
-echo "##vso[task.setvariable variable=newTagFound;isOutput=true]true"
-echo "##vso[task.setvariable variable=acrDigest;isOutput=true]$acrDigest"
-echo "##vso[task.setvariable variable=sourceDigest;isOutput=true]${sourceDigest:7:6}"
+if [[ "$acrDigest" == "" || "$acrDigest" != "$sourceDigest" ]]; then
+    # Import needed (image missing or digest mismatch)
+    echo "##vso[task.setvariable variable=newTagFound;isOutput=true]true"
+    echo "##vso[task.setvariable variable=acrDigest;isOutput=true]$acrDigest"
+    echo "##vso[task.setvariable variable=sourceDigest;isOutput=true]${sourceDigest:7:6}"
+else
+    echo "Nothing to import for ${sourceRegistry}/${sourceImage}."
+    exit 0
+fi

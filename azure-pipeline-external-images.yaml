@@ -137,3 +137,6 @@ stages:
         scriptType: bash
         scriptLocation: 'scriptPath'
         scriptPath: acr-cache.sh
+        arguments: >
+          --acrName "$(acrName)"
+          --subscription "$(serviceConnection)"
