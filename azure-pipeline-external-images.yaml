@@ -99,6 +99,16 @@ stages:
 
     - task: AzureCLI@2
       displayName: 'Import docker image'
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "newTagFound: $(newTagFound)"
+          echo "sourceDigest: $(sourceDigest)"
+          echo "acrDigest: $(acrDigest)"
+
+    - task: AzureCLI@2
+      displayName: 'Import docker image'
       condition: eq(variables['newTagFound'], 'true')
       inputs:
         azureSubscription: $(serviceConnection)
