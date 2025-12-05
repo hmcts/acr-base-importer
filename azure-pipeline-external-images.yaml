@@ -98,9 +98,10 @@ stages:
           --acrName "$(acrName)"
 
     - task: AzureCLI@2
-      displayName: 'Import docker image'
+      displayName: 'show vars'
       inputs:
         azureSubscription: $(serviceConnection)
+        scriptType: bash
         scriptLocation: 'inlineScript'
         inlineScript: |
           echo "newTagFound: $(newTagFound)"
@@ -112,6 +113,7 @@ stages:
       condition: eq(variables['newTagFound'], 'true')
       inputs:
         azureSubscription: $(serviceConnection)
+        scriptType: bash
         scriptLocation: 'inlineScript'
         inlineScript: |
           echo "Importing $(baseRegistry)/$(baseImage):$(baseTag) as $(targetImage):$(baseTag)-$(baseDigest) ..."
