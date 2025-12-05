@@ -51,12 +51,13 @@ steps:
     inlineScript: |
       echo "Importing ${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }} as ${{ parameters.targetImage }}:${{ parameters.baseTag }}-${{ parameters.baseDigest }} ..."
       az acr import --force --name ${{ parameters.acrName }} --source ${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }} --image ${{ parameters.targetImage }}:${{ parameters.baseTag }}-${{ parameters.baseDigest }}
+      echo "##vso[task.setvariable variable=importSucceeded;isOutput=true]true"
 
 # Re-tag as latest (only if import task actually ran and succeeded)
 - task: AzureCLI@2
   displayName: 'Re-tag as latest: ${{ parameters.baseImage }}:${{ parameters.baseTag }}'
   name: ${{ parameters.taskName }}
-  condition: eq(steps.import_digest_${{ parameters.taskName }}.outcome, 'Succeeded')
+  condition: eq(variables['import_digest_${{ parameters.taskName }}.importSucceeded'], 'true')
   inputs:
     azureSubscription: ${{ parameters.serviceConnection }}
     scriptType: bash
