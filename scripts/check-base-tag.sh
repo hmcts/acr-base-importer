@@ -66,7 +66,8 @@ _result=$(docker buildx imagetools inspect --raw $baseRegistry/$baseImage:$baseT
 }
 
 # Extract wrapper digest from source registry (covers all architectures)
-_digest=$(echo $_result | sha256sum | cut -d' ' -f1)
+# Pipe directly to avoid command substitution normalizing whitespace
+_digest=$(docker buildx imagetools inspect --raw $baseRegistry/$baseImage:$baseTag 2>/dev/null | sha256sum 2>/dev/null | cut -d' ' -f1)
 
 [ "$_digest" == "" ] && echo "Error: cannot get image digest for ${baseImage}:${baseTag}" && exit 1
 
