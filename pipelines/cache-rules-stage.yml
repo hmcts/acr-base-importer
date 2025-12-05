@@ -84,14 +84,14 @@ stages:
           scriptType: bash
           scriptLocation: inlineScript
           inlineScript: |
-            set -e
+            set +e  # Don't exit on error - we handle missing repos
             REPO="${{ rule.destinationRepo }}"
 
-            # Get all tags for the repository
-            TAGS_JSON=$(az acr repository show-tags -n ${{ parameters.acrName }} --repository "$REPO" -o json 2>/dev/null)
+            # Get all tags for the repository (will return empty if repo doesn't exist)
+            TAGS_JSON=$(az acr repository show-tags -n ${{ parameters.acrName }} --repository "$REPO" -o json 2>/dev/null || echo "[]")
 
             if [ -z "$TAGS_JSON" ] || [ "$TAGS_JSON" == "[]" ]; then
-              echo "##vso[task.logissue type=warning]No tags found for $REPO - skipping scan"
+              echo "##vso[task.logissue type=warning]No tags found for $REPO (repo may not exist yet) - skipping scan"
               echo "##vso[task.setvariable variable=imageExists;isOutput=true]false"
             else
               # First try to find 'latest' tag
@@ -100,7 +100,7 @@ stages:
                 echo "##vso[task.setvariable variable=imageExists;isOutput=true]true"
               else
                 # Fallback: Get the most recently modified tag from manifests
-                MOST_RECENT_TAG=$(az acr repository show-manifests -n ${{ parameters.acrName }} --repository "$REPO" -o json 2>/dev/null | jq -r 'sort_by(.lastUpdateTime) | reverse | .[0].tags | .[]')
+                MOST_RECENT_TAG=$(az acr repository show-manifests -n ${{ parameters.acrName }} --repository "$REPO" -o json 2>/dev/null | jq -r 'sort_by(.lastUpdateTime) | reverse | .[0].tags | .[]' || echo "")
 
                 if [ -z "$MOST_RECENT_TAG" ] || [ "$MOST_RECENT_TAG" == "null" ]; then
                   echo "##vso[task.logissue type=warning]Could not determine tag for $REPO - skipping scan"
@@ -112,6 +112,7 @@ stages:
                 fi
               fi
             fi
+            exit 0  # Always succeed this task
 
       # Scan destination image if it exists
       - template: ../templates/scan-image.yml
