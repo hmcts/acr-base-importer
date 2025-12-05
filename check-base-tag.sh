@@ -99,3 +99,21 @@ else
     echo "Nothing to import for ${sourceRegistry}/${sourceImage}."
     exit 0
 fi
+
+##############################################
+### Summary: Echo all key variables for review
+##############################################
+echo "--- Pipeline and Script Variable Summary ---"
+echo "acrName: $acrName"
+echo "sourceImage: $sourceImage"
+echo "sourceRegistry: $sourceRegistry"
+echo "targetImage: $targetImage"
+echo "tag: $tag"
+echo "sourceDigestRaw: $sourceDigestRaw"
+echo "sourceDigest: $sourceDigest"
+echo "sourceDigest (short): ${sourceDigest:7:6}"
+echo "acrDigestRaw: $acrDigestRaw"
+echo "acrDigest: $acrDigest"
+echo "--- End Variable Summary ---"
+
+
