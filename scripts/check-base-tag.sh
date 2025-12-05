@@ -57,31 +57,29 @@ if [ -z "$baseImage" ] || [ -z "$baseRegistry" ] || [ -z "$baseTag" ] || [ -z "$
     exit 1
 fi
 
-_result=$(docker buildx imagetools inspect --raw $baseRegistry/$baseImage:$baseTag)
+_result=$(docker buildx imagetools inspect --raw $baseRegistry/$baseImage:$baseTag 2>&1) || {
+    echo "⚠ Warning: cannot inspect image ${baseRegistry}/${baseImage}:${baseTag}" >&2
+    echo "##vso[task.logissue type=warning]Cannot inspect image ${baseRegistry}/${baseImage}:${baseTag} - skipping import for this image"
+    echo "##vso[task.setvariable variable=newTagFound;isOutput=true]false"
+    echo "##vso[task.setvariable variable=inspectError;isOutput=true]true"
+    exit 0  # Continue to next image in loop
+}
 
-if echo $_result | grep -q manifests
-then
-  _digest=$(echo $_result | jq -r '.manifests[] | select (.platform.architecture == "amd64") | .digest')
-else
-  _digest=$(echo $_result | jq -r .config.digest)
-fi
+# Extract wrapper digest from source registry (covers all architectures)
+_digest=$(echo $_result | sha256sum | cut -d' ' -f1)
 
 [ "$_digest" == "" ] && echo "Error: cannot get image digest for ${baseImage}:${baseTag}" && exit 1
 
 # Get current digest from target azure registry
-echo "Base registry current digest for ${baseImage}:${baseTag}: [${_digest}]"
+echo "Base registry wrapper digest for ${baseImage}:${baseTag}: [${_digest}]"
 
-# Get the manifest from ACR and extract the amd64 platform digest directly
-_acr_manifest=$(az acr manifest show --registry $acrName --name $targetImage -o json 2>/dev/null || echo "")
+# Get the wrapper digest from ACR using manifest list-metadata
+# Only check for the specific baseTag; if it doesn't exist, treat as new image (empty digest)
+_acr_digest_raw=$(az acr manifest list-metadata --registry $acrName --name $targetImage --query "[?not_null(tags[])]|[?contains(tags, '${baseTag}')].digest|[0]" -o tsv 2>/dev/null || echo "")
+# Strip sha256: prefix for consistent comparison with docker buildx output (handles empty string gracefully)
+_acr_digest=${_acr_digest_raw#sha256:}
 
-# Extract the amd64 platform digest from the manifest
-if [ -n "$_acr_manifest" ] && [ "$_acr_manifest" != "" ]; then
-  _acr_digest=$(echo $_acr_manifest | jq -r '.manifests[] | select (.platform.architecture == "amd64") | .digest' 2>/dev/null || echo "")
-else
-  _acr_digest=""
-fi
-
-echo "Target registry current digest for ${baseImage}:${baseTag}: [${_acr_digest}]"
+echo "Target registry wrapper digest for ${baseImage}:${baseTag}: [${_acr_digest}]"
 
 [[ "$_acr_digest" != "" && "$_acr_digest" == "$_digest" ]] && echo "Nothing to import for ${baseRegistry}/${baseImage}." && exit 0  # Nothing else to do
 
