@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+set -x
 
 acrName=
 sourceImage=
@@ -61,7 +62,7 @@ fi
 ##############################################
 ### Lookup current digest in source registry
 ##############################################
-sourceDigestRaw=$(docker buildx imagetools inspect --raw $sourceRegistry/$sourceImage:$tag 2>&1) || {
+sourceDigestRaw=$(docker buildx imagetools inspect --raw $sourceRegistry/$sourceImage:$tag) || {
     echo "⚠ Warning: cannot inspect image ${sourceRegistry}/${sourceImage}:${tag}" >&2
     echo "##vso[task.logissue type=warning]Cannot inspect image ${sourceRegistry}/${sourceImage}:${tag} - skipping import for this image"
     echo "##vso[task.setvariable variable=newTagFound;isOutput=true]false"
@@ -69,7 +70,7 @@ sourceDigestRaw=$(docker buildx imagetools inspect --raw $sourceRegistry/$source
     exit 0  # Continue to next image in loop
 }
 
-sourceDigest=$(docker buildx imagetools inspect --raw $sourceRegistry/$sourceImage:$tag 2>/dev/null | sha256sum 2>/dev/null | cut -d' ' -f1)
+sourceDigest=$(docker buildx imagetools inspect --raw $sourceRegistry/$sourceImage:$tag | sha256sum | cut -d' ' -f1)
 
 [ "$sourceDigest" == "" ] && echo "Error: cannot get image digest for ${sourceImage}:${tag}" && exit 1
 
@@ -80,7 +81,7 @@ echo "Source registry wrapper digest for ${sourceImage}:${tag}: [${sourceDigest}
 ### Lookup existing digest in ACR
 ##############################################
 
-acrDigestRaw=$(az acr manifest list-metadata --registry $acrName --name $targetImage --query "[?not_null(tags[])]|[?contains(tags, '${tag}')].digest|[0]" -o tsv 2>/dev/null || echo "")
+acrDigestRaw=$(az acr manifest list-metadata --registry $acrName --name $targetImage --query "[?not_null(tags[])]|[?contains(tags, '${tag}')].digest|[0]" -o tsv || echo "")
 
 acrDigest=${acrDigestRaw#sha256:}
 
