@@ -85,6 +85,7 @@ stages:
 
     - task: AzureCLI@2
       displayName: 'Check base registry if new digest available for tag'
+      name: checkBaseTag
       inputs:
         azureSubscription: $(serviceConnection)
         scriptType: bash
@@ -104,13 +105,13 @@ stages:
         scriptType: bash
         scriptLocation: 'inlineScript'
         inlineScript: |
-          echo "newTagFound: $(newTagFound)"
-          echo "sourceDigest: $(sourceDigest)"
-          echo "acrDigest: $(acrDigest)"
+          echo "newTagFound: $(checkBaseTag.newTagFound)"
+          echo "sourceDigest: $(checkBaseTag.sourceDigest)"
+          echo "acrDigest: $(checkBaseTag.acrDigest)"
 
     - task: AzureCLI@2
       displayName: 'Import docker image'
-      condition: eq(variables['newTagFound'], 'true')
+      condition: eq(variables['checkBaseTag.newTagFound'], 'true')
       inputs:
         azureSubscription: $(serviceConnection)
         scriptType: bash
@@ -121,7 +122,7 @@ stages:
 
     - task: AzureCLI@2
       displayName: 'Re-tag new image using the base tag'
-      condition: eq(variables['newTagFound'], 'true')
+      condition: eq(variables['checkBaseTag.newTagFound'], 'true')
       inputs:
         azureSubscription: $(serviceConnection)
         scriptType: bash
@@ -133,7 +134,7 @@ stages:
           --acrName "$(acrName)"
           --targetRegistry "$(targetRegistry)"
           --baseDigest "$(baseDigest)"
-          --acrDigest "$(acrDigest)"
+          --acrDigest "$(checkBaseTag.acrDigest)"
 
 - stage: CreateACRCache
   displayName: "Create ACR Cache"
