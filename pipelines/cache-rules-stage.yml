@@ -77,7 +77,7 @@ stages:
 
       # Check if destination images exist in ACR
       - task: AzureCLI@2
-        displayName: 'Check if cached image exists: ${{ rule.destinationRepo }}'
+        displayName: 'Check if cached latest tag exists: ${{ rule.destinationRepo }}'
         name: check_dest_${{ replace(rule.ruleName, '-', '_') }}
         inputs:
           azureSubscription: ${{ parameters.serviceConnection }}
