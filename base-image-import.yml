@@ -93,7 +93,7 @@ jobs:
         echo "Importing $(baseRegistry)/$(baseImage):$(baseTag) as $(targetImage):$(baseTag)-$(baseDigest) ..."
         az acr import --force --name $(acrName) --source $(baseRegistry)/$(baseImage):$(baseTag) --image $(targetImage):$(baseTag)-$(baseDigest)
 
-  - task: AzureCLI@1
+  - task: AzureCLI@
     displayName: 'Re-tag new image using the base tag'
     condition: eq(variables['newTagFound'], 'true')
     inputs:
@@ -107,9 +107,13 @@ jobs:
   pool:
     vmImage: ubuntu-latest
   steps:
-    - task: AzureCLI@1
+    - task: AzureCLI@2
       displayName: 'Create ACR Cache'
       inputs:
         azureSubscription: $(serviceConnection)
+        scriptType: bash
         scriptLocation: 'scriptPath'
         scriptPath: acr-cache.sh
+        arguments: >
+          --acrName "$(acrName)"
+          --subscription "$(serviceConnection)"
