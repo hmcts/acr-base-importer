@@ -1,0 +1,92 @@
+# Template: Setup Trivy Scanner
+# Purpose: Install Trivy and update vulnerability databases
+# This template handles one-time setup for scanning tasks
+#
+# Usage:
+#   - template: acr-base-importer/templates/setup-trivy.yml
+#     parameters:
+#       trivyVersion: '0.68.1'
+
+parameters:
+- name: trivyVersion
+  type: string
+  default: '0.68.1'
+  displayName: 'Trivy Version'
+
+steps:
+# Install Trivy scanner binary
+- task: Bash@3
+  displayName: 'Install Trivy Scanner v${{ parameters.trivyVersion }}'
+  inputs:
+    targetType: 'inline'
+    script: |
+      set -e
+      echo "Installing Trivy version ${{ parameters.trivyVersion }}..."
+
+      # Download Trivy binary and checksums
+      wget -q https://github.com/aquasecurity/trivy/releases/download/v${{ parameters.trivyVersion }}/trivy_${{ parameters.trivyVersion }}_Linux-64bit.tar.gz
+      wget -q https://github.com/aquasecurity/trivy/releases/download/v${{ parameters.trivyVersion }}/trivy_${{ parameters.trivyVersion }}_checksums.txt
+
+      # Verify checksum for security
+      echo "Verifying checksum..."
+      grep "trivy_${{ parameters.trivyVersion }}_Linux-64bit.tar.gz" trivy_${{ parameters.trivyVersion }}_checksums.txt | sha256sum -c -
+
+      # Extract to current working directory
+      tar -xzf trivy_${{ parameters.trivyVersion }}_Linux-64bit.tar.gz
+
+      # Clean up download artifacts
+      rm -f trivy_${{ parameters.trivyVersion }}_Linux-64bit.tar.gz trivy_${{ parameters.trivyVersion }}_checksums.txt
+
+      # Verify installation
+      ./trivy --version
+
+      echo "✓ Trivy installed successfully"
+
+# Update Trivy vulnerability database
+- task: Bash@3
+  displayName: 'Update Trivy Vulnerability Databases'
+  inputs:
+    targetType: 'inline'
+    script: |
+      set -e
+
+      # Configure Trivy cache directory
+      export TRIVY_CACHE_DIR="${HOME}/.cache/trivy"
+      mkdir -p "$TRIVY_CACHE_DIR"
+
+      echo "Updating Trivy vulnerability database..."
+      # Retry up to 3 times with exponential backoff if database download fails
+      for i in 1 2 3; do
+        echo "Database download attempt $i of 3..."
+        if ./trivy image --download-db-only; then
+          echo "✓ Vulnerability database updated successfully"
+          break
+        else
+          if [ $i -eq 3 ]; then
+            echo "##vso[task.logissue type=error]Failed to download vulnerability database after 3 attempts"
+            exit 1
+          fi
+          echo "Download failed, waiting before retry..."
+          sleep $((5 * i))  # Wait 5s, 10s, 15s
+        fi
+      done
+
+      echo "Updating Trivy Java database..."
+      # Download Java DB for scanning Java images with better accuracy
+      for i in 1 2 3; do
+        echo "Java DB download attempt $i of 3..."
+        if ./trivy image --download-java-db-only; then
+          echo "✓ Java database updated successfully"
+          echo "Cache location: $TRIVY_CACHE_DIR"
+          break
+        else
+          if [ $i -eq 3 ]; then
+            echo "##vso[task.logissue type=error]Failed to download Java database after 3 attempts"
+            exit 1
+          fi
+          echo "Download failed, waiting before retry..."
+          sleep $((5 * i))  # Wait 5s, 10s, 15s
+        fi
+      done
+
+      echo "✓ All databases updated successfully"

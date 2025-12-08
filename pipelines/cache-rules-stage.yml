@@ -1,0 +1,126 @@
+#
+## Stage: Create ACR Cache Rules
+## Called by: trivy-scan-import.yml
+##
+parameters:
+- name: cacheRulesToValidate
+  type: object
+- name: serviceConnection
+  type: string
+  default: 'DCD-CNP-PROD'
+- name: keyvaultName
+  type: string
+  default: 'infra-vault-prod'
+- name: acrName
+  type: string
+  default: 'hmctspublic'
+- name: trivyVersion
+  type: string
+  default: '0.68.1'
+- name: severityThreshold
+  type: string
+  default: 'CRITICAL,HIGH'
+- name: trivyTimeout
+  type: string
+  default: '10m'
+
+stages:
+- stage: CreateCache
+  displayName: 'Create ACR Cache Rules'
+  jobs:
+  - job: ValidateAndCreateCacheRules
+    displayName: 'Scan Cache Rules and Create Rules'
+    timeoutInMinutes: 180  # 3 hours - scanning multiple repos takes time
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    # Get ACR credentials from Key Vault
+    - task: AzureKeyVault@2
+      displayName: 'Get ACR credentials from Key Vault'
+      inputs:
+        azureSubscription: ${{ parameters.serviceConnection }}
+        keyVaultName: ${{ parameters.keyvaultName }}
+        secretsFilter: 'registry-public-username,registry-public-password'
+
+    # Setup Trivy once for all cache rule scanning
+    - template: ../templates/setup-trivy.yml
+      parameters:
+        trivyVersion: ${{ parameters.trivyVersion }}
+
+    # Scan source repositories (latest tag) before creating cache rules
+    - ${{ each rule in parameters.cacheRulesToValidate }}:
+      # Create ACR cache rules
+      - task: AzureCLI@2
+        displayName: 'Create cache rule: ${{ rule.ruleName }}'
+        name: create_${{ replace(rule.ruleName, '-', '_') }}
+        inputs:
+          azureSubscription: ${{ parameters.serviceConnection }}
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+            set -e
+
+            echo "Creating cache rule: ${{ rule.ruleName }}"
+            echo "  Source: ${{ rule.baseRegistry }}/${{ rule.baseImage }}"
+            echo "  Destination: ${{ rule.destinationRepo }}"
+
+            # if az acr cache create \
+            #     -r ${{ parameters.acrName }} \
+            #     -n "${{ rule.ruleName }}" \
+            #     -s "${{ rule.baseRegistry }}/${{ rule.baseImage }}" \
+            #     -t "${{ rule.destinationRepo }}" \
+            #     -c dockerhub 2>&1; then
+            #   echo "✓ Created cache rule: ${{ rule.ruleName }}"
+            # else
+            #   echo "⚠ Could not create rule ${{ rule.ruleName }} (may already exist)"
+            # fi
+
+      # Check if destination images exist in ACR
+      - task: AzureCLI@2
+        displayName: 'Check if cached image exists: ${{ rule.destinationRepo }}'
+        name: check_dest_${{ replace(rule.ruleName, '-', '_') }}
+        inputs:
+          azureSubscription: ${{ parameters.serviceConnection }}
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+            set +e  # Don't exit on error - we handle missing repos
+            REPO="${{ rule.destinationRepo }}"
+
+            # Get all tags for the repository (will return empty if repo doesn't exist)
+            TAGS_JSON=$(az acr repository show-tags -n ${{ parameters.acrName }} --repository "$REPO" -o json 2>/dev/null || echo "[]")
+
+            if [ -z "$TAGS_JSON" ] || [ "$TAGS_JSON" == "[]" ]; then
+              echo "##vso[task.logissue type=warning]No tags found for $REPO (repo may not exist yet) - skipping scan"
+              echo "##vso[task.setvariable variable=imageExists;isOutput=true]false"
+            else
+              # First try to find 'latest' tag
+              if echo "$TAGS_JSON" | jq -e '.[] | select(. == "latest")' >/dev/null 2>&1; then
+                echo "##vso[task.setvariable variable=tagToScan;isOutput=true]latest"
+                echo "##vso[task.setvariable variable=imageExists;isOutput=true]true"
+              else
+                # Fallback: Get the most recently modified tag from manifests that have tags
+                MOST_RECENT_TAG=$(az acr repository show-manifests -n ${{ parameters.acrName }} --repository "$REPO" -o json 2>/dev/null | jq -r 'map(select(.tags != null and (.tags | length) > 0)) | max_by(.lastUpdateTime).tags[0]' || echo "")
+
+                if [ -z "$MOST_RECENT_TAG" ] || [ "$MOST_RECENT_TAG" == "null" ]; then
+                  echo "##vso[task.logissue type=warning]Could not determine tag for $REPO - skipping scan"
+                  echo "##vso[task.setvariable variable=imageExists;isOutput=true]false"
+                else
+                  echo "⚠ No 'latest' tag found, using most recent tag: $MOST_RECENT_TAG"
+                  echo "##vso[task.setvariable variable=tagToScan;isOutput=true]$MOST_RECENT_TAG"
+                  echo "##vso[task.setvariable variable=imageExists;isOutput=true]true"
+                fi
+              fi
+            fi
+            exit 0  # Always succeed this task
+
+      # Scan destination image if it exists
+      - template: ../templates/scan-image.yml
+        parameters:
+          baseRegistry: ${{ parameters.acrName }}.azurecr.io
+          baseImage: ${{ rule.destinationRepo }}
+          baseTag: $(check_dest_${{ replace(rule.ruleName, '-', '_') }}.tagToScan)
+          severityThreshold: ${{ parameters.severityThreshold }}
+          trivyTimeout: ${{ parameters.trivyTimeout }}
+          taskName: scan_dest_${{ replace(rule.ruleName, '-', '_') }}
+          condition: eq(variables['check_dest_${{ replace(rule.ruleName, '-', '_') }}.imageExists'], 'true')

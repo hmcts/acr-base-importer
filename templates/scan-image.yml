@@ -1,0 +1,84 @@
+# Template: Scan Image with Trivy
+# Purpose: Scan a container image for vulnerabilities
+
+parameters:
+- name: baseRegistry
+  type: string
+  displayName: 'Base Registry'
+- name: baseImage
+  type: string
+  displayName: 'Base Image'
+- name: baseTag
+  type: string
+  displayName: 'Base Tag'
+- name: severityThreshold
+  type: string
+  default: 'CRITICAL,HIGH'
+  displayName: 'Severity Threshold'
+- name: trivyTimeout
+  type: string
+  default: '10m'
+  displayName: 'Trivy Timeout'
+- name: taskName
+  type: string
+  displayName: 'Task Name (must be unique in job)'
+- name: condition
+  type: string
+  default: 'true'
+  displayName: 'Task Condition'
+
+steps:
+- task: Bash@3
+  displayName: 'Scanning: ${{ parameters.baseImage }}'
+  name: ${{ parameters.taskName }}
+  condition: ${{ parameters.condition }}
+  inputs:
+    targetType: 'inline'
+    script: |
+      set -e
+
+      IMAGE_TO_SCAN="${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }}"
+      SAFE_NAME="${{ parameters.taskName }}"
+
+      echo "Scanning: $IMAGE_TO_SCAN"
+
+      # Scan image and save JSON
+      ./trivy image \
+        --severity ${{ parameters.severityThreshold }} \
+        --format json \
+        --timeout ${{ parameters.trivyTimeout }} \
+        --ignore-unfixed \
+        --scanners vuln \
+        --output "trivy-report-${SAFE_NAME}.json" \
+        "$IMAGE_TO_SCAN"
+
+      # Parse vulnerabilities
+      REPORT_FILE="trivy-report-${SAFE_NAME}.json"
+      CRITICAL_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$REPORT_FILE")
+      HIGH_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$REPORT_FILE")
+
+      # Generate human-readable table
+      ./trivy convert \
+        --format table \
+        --output "trivy-scan-${SAFE_NAME}.txt" \
+        "$REPORT_FILE" || true
+
+      # Display table in console for readability
+      echo ""
+      echo "=== Vulnerability Scan Report ==="
+      cat "trivy-scan-${SAFE_NAME}.txt" || echo "Unable to display report"
+      echo "=================================="
+      echo ""
+
+      echo "Vulnerabilities: Critical=$CRITICAL_COUNT, High=$HIGH_COUNT"
+
+      # Determine pass/fail based on critical count
+      if [ "$CRITICAL_COUNT" -eq 0 ]; then
+        echo "##vso[task.setvariable variable=scanPassed;isOutput=true]true"
+        echo "✓ Scan passed - no critical vulnerabilities"
+      else
+        echo "##vso[task.setvariable variable=scanPassed;isOutput=true]false"
+        echo "##vso[task.logissue type=warning]Found $CRITICAL_COUNT critical vulnerabilities"
+        echo "✗ Scan completed with warnings - see report for details"
+        echo "##vso[task.complete result=SucceededWithIssues;]Task completed with vulnerabilities found"
+      fi

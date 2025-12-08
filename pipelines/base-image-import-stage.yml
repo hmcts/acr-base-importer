@@ -1,0 +1,93 @@
+#
+## Stage: Scan with Trivy and Import base images to ACR
+## Called by: trivy-scan-import.yml
+##
+parameters:
+- name: baseImagestoImport
+  type: object
+- name: serviceConnection
+  type: string
+  default: 'DCD-CNP-PROD'
+- name: keyvaultName
+  type: string
+  default: 'infra-vault-prod'
+- name: acrName
+  type: string
+  default: 'hmctspublic'
+- name: trivyVersion
+  type: string
+  default: '0.68.1'
+- name: severityThreshold
+  type: string
+  default: 'CRITICAL,HIGH'
+- name: trivyTimeout
+  type: string
+  default: '10m'
+
+stages:
+- stage: ScanAndImport
+  displayName: 'Scan images with Trivy and Import to ACR'
+  jobs:
+  - job: ScanAndImportImages
+    displayName: 'Scan with Trivy and Import to ACR'
+    timeoutInMinutes: 120  # 2 hours max - prevents hanging
+    pool:
+      name: hmcts-cftptl-agent-pool
+
+    steps:
+    # Get secrets from Key Vault for ACR authentication and notifications
+    - task: AzureKeyVault@2
+      displayName: 'Get ACR credentials from Key Vault'
+      inputs:
+        azureSubscription: ${{ parameters.serviceConnection }}
+        keyVaultName: ${{ parameters.keyvaultName }}
+        secretsFilter: 'registry-public-username,registry-public-password,registry-slack-webhook'
+
+    # Setup Trivy scanner (install binary and update databases)
+    - template: ../templates/setup-trivy.yml
+      parameters:
+        trivyVersion: ${{ parameters.trivyVersion }}
+
+    # Loop over each image using Azure DevOps native each loops
+    - ${{ each image in parameters.baseImagestoImport }}:
+      # Check if new version exists
+      - task: AzureCLI@2
+        displayName: 'Check version: ${{ image.baseImage }}:${{ image.baseTag }}'
+        name: check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
+        inputs:
+          azureSubscription: ${{ parameters.serviceConnection }}
+          scriptType: bash
+          scriptLocation: scriptPath
+          scriptPath: $(System.DefaultWorkingDirectory)/scripts/check-base-tag.sh
+          arguments: >
+            --baseImage "${{ image.baseImage }}"
+            --baseRegistry "${{ image.baseRegistry }}"
+            --baseTag "${{ image.baseTag }}"
+            --targetImage "${{ image.targetImage }}"
+            --acrName "${{ parameters.acrName }}"
+
+      # Scan image with Trivy (only if new version found)
+      - template: ../templates/scan-image.yml
+        parameters:
+          baseRegistry: ${{ image.baseRegistry }}
+          baseImage: ${{ image.baseImage }}
+          baseTag: ${{ image.baseTag }}
+          severityThreshold: ${{ parameters.severityThreshold }}
+          trivyTimeout: ${{ parameters.trivyTimeout }}
+          taskName: scan_base_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
+          condition: eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true')
+
+      # Import and re-tag new image as latest (only if scan passed)
+      - template: ../templates/import-image.yml
+        parameters:
+          baseImage: ${{ image.baseImage }}
+          baseTag: ${{ image.baseTag }}
+          baseRegistry: ${{ image.baseRegistry }}
+          targetImage: ${{ image.targetImage }}
+          acrName: ${{ parameters.acrName }}
+          serviceConnection: ${{ parameters.serviceConnection }}
+          baseDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)
+          acrDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)
+          targetRegistry: ${{ parameters.acrName }}.azurecr.io
+          taskName: import_base_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
+          condition: eq(variables['scan_base_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.scanPassed'], 'true')
