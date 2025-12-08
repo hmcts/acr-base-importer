@@ -61,7 +61,9 @@ if [ -z "$tag" ] || [ -z "$targetImage" ] || [ -z "$acrName" ] || [ -z "$targetR
 fi
 
 # Move base tag to new image
-[ "${acrDigest}" != "" ] && echo "Untagging previous ${tag} ..." && az acr repository untag -n ${acrName} --image ${targetImage}:${tag}
+# Always untag first if the tag exists, then create new tag
+echo "Checking if ${tag} exists and removing it..."
+az acr repository untag -n ${acrName} --image ${targetImage}:${tag} 2>/dev/null || echo "Tag ${tag} does not exist, continuing..."
 
 echo "Tagging ${tag}-${sourceDigest} as ${tag} ..."
 az acr import --name ${acrName} --source ${targetRegistry}/${targetImage}:${tag}-${sourceDigest} --image ${targetImage}:${tag}
