@@ -92,11 +92,11 @@ echo "Target registry wrapper digest for ${targetImage}:${tag}: [${acrDigest}]"
 if [[ "$acrDigest" == "" || "$acrDigest" != "$sourceDigest" ]]; then
     # Import needed (image missing or digest mismatch)
     shortenedSourceDigest="${sourceDigest:0:6}"
-    echo "[DEBUG] Setting newTagFound to: true"
+    # echo "[DEBUG] Setting newTagFound to: true"
     echo "##vso[task.setvariable variable=newTagFound;isOutput=true]true"
-    echo "[DEBUG] Setting acrDigest to: [$acrDigest]"
+    # echo "[DEBUG] Setting acrDigest to: [$acrDigest]"
     echo "##vso[task.setvariable variable=acrDigest;isOutput=true]$acrDigest"
-    echo "[DEBUG] Setting sourceDigest to: [$shortenedSourceDigest]"
+    # echo "[DEBUG] Setting sourceDigest to: [$shortenedSourceDigest]"
     echo "##vso[task.setvariable variable=sourceDigest;isOutput=true]$shortenedSourceDigest"
 else
     echo "Nothing to import for ${sourceRegistry}/${sourceImage}."
