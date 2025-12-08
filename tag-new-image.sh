@@ -60,11 +60,32 @@ if [ -z "$tag" ] || [ -z "$targetImage" ] || [ -z "$acrName" ] || [ -z "$targetR
     exit 1
 fi
 
-# Move base tag to new image
-# Always untag first if the tag exists, then create new tag
-echo "Checking if ${tag} exists and removing it..."
-az acr repository untag -n ${acrName} --image ${targetImage}:${tag} 2>/dev/null || echo "Tag ${tag} does not exist, continuing..."
 
-echo "Tagging ${tag}-${sourceDigest} as ${tag} ..."
-az acr import --name ${acrName} --source ${targetRegistry}/${targetImage}:${tag}-${sourceDigest} --image ${targetImage}:${tag}
+# Check if the source tag (e.g., latest-$digest) exists in ACR before proceeding
+echo "Checking if source tag ${tag}-${sourceDigest} exists in ${acrName}/${targetImage}..."
+sourceTagExists=$(az acr repository show-tags -n ${acrName} --repository ${targetImage} --query "[?@=='${tag}-${sourceDigest}'] | [0]" -o tsv)
+
+if [ -z "$sourceTagExists" ]; then
+    echo "Error: Source tag ${tag}-${sourceDigest} does not exist in ${acrName}/${targetImage}. Import must have failed."
+    exit 1
+fi
+
+# Remove the target tag if it exists
+echo "Removing existing ${tag} tag if present..."
+az acr repository untag -n ${acrName} --image ${targetImage}:${tag} 2>/dev/null || true
+
+# Attempt to import the image with the new tag
+echo "Importing ${targetRegistry}/${targetImage}:${tag}-${sourceDigest} as ${targetImage}:${tag} ..."
+az acr import --name ${acrName} --source ${targetRegistry}/${targetImage}:${tag}-${sourceDigest} --image ${targetImage}:${tag} || {
+    echo "Import failed, trying alternative method with repository tag..."
+    manifestDigest=$(az acr repository show-manifests -n ${acrName} --repository ${targetImage} --query "[?tags[?contains(@, '${tag}-${sourceDigest}')]].digest | [0]" -o tsv)
+    if [ -n "$manifestDigest" ]; then
+        echo "Creating tag ${tag} for manifest ${manifestDigest}..."
+        az acr repository untag -n ${acrName} --image ${targetImage}:${tag} 2>/dev/null || true
+        az acr manifest metadata update -r ${acrName} -n ${targetImage}@${manifestDigest} --tag ${tag}
+    else
+        echo "Error: Could not find source image ${targetImage}:${tag}-${sourceDigest}"
+        exit 1
+    fi
+}
 echo "Done."
