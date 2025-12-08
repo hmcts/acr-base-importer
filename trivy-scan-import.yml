@@ -49,7 +49,7 @@ parameters:
 
 - name: cacheRulesToValidate
   type: object
-  displayName: 'Cache rules to validate (from acr-repositories.yaml)'
+  displayName: 'Cache rules to create and validate'
   default:
   - ruleName: 'postgresql'
     baseRegistry: 'docker.io'
