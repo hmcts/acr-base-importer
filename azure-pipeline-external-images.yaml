@@ -1,0 +1,144 @@
+---
+name: ACR External image pipeline
+
+trigger:
+  - master
+
+pr: none
+
+schedules:
+  - cron: '0 1 * * *'
+    displayName: Daily build
+    always: 'true'
+    branches:
+      include:
+        - master
+
+parameters:
+  - name: environment
+    displayName: Environment
+    type: string
+    default: prod
+    values:
+      - prod
+      - sbox
+
+variables:
+  ${{ if eq(parameters.environment, 'prod') }}:
+    acrName: hmctsprod
+    targetRegistry: hmctsprod.azurecr.io
+    keyvaultName: infra-vault-prod
+    serviceConnection: DCD-CNP-PROD
+  ${{ if eq(parameters.environment, 'sbox') }}:
+    acrName: hmctssbox
+    targetRegistry: hmctssbox.azurecr.io
+    keyvaultName: infra-vault-sandbox
+    serviceConnection: DCD-CFT-Sandbox
+
+stages:
+- stage: ImportBaseImages
+  displayName: "Import Base Images"
+  jobs:
+  - job: ImportBaseImages
+    pool:
+      name: hmcts-cftptl-agent-pool
+    strategy:
+      maxParallel: 5
+      matrix:
+        openjdk-25-distroless:
+          baseImage: distroless/java25-debian13
+          baseRegistry: gcr.io
+          baseTag: latest
+          targetImage: imported/distroless/java25
+        openjdk-25-debug-distroless:
+          baseImage: distroless/java25-debian13
+          baseRegistry: gcr.io
+          baseTag: debug
+          targetImage: imported/distroless/java25
+        openjdk-21-distroless:
+          baseImage: distroless/java21-debian12
+          baseRegistry: gcr.io
+          baseTag: latest
+          targetImage: imported/distroless/java21
+        openjdk-21-debug-distroless:
+          baseImage: distroless/java21-debian12
+          baseRegistry: gcr.io
+          baseTag: debug
+          targetImage: imported/distroless/java21
+        openjdk-17-distroless:
+          baseImage: distroless/java17-debian12
+          baseRegistry: gcr.io
+          baseTag: latest
+          targetImage: imported/distroless/java17
+        openjdk-17-debug-distroless:
+          baseImage: distroless/java17-debian12
+          baseRegistry: gcr.io
+          baseTag: debug
+          targetImage: imported/distroless/java17
+    steps:
+    - task: AzureKeyVault@2
+      displayName: 'Get secrets from Keyvault'
+      inputs:
+        azureSubscription: $(serviceConnection)
+        keyVaultName: $(keyvaultName)
+        secretsFilter: 'registry-slack-webhook'
+
+    - task: AzureCLI@2
+      displayName: 'Check base registry if new digest available for tag'
+      name: checkBaseTag
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: 'scriptPath'
+        scriptPath: check-base-tag.sh
+        arguments: >
+          --sourceImage "$(baseImage)"
+          --sourceRegistry "$(baseRegistry)"
+          --tag "$(baseTag)"
+          --targetImage "$(targetImage)"
+          --acrName "$(acrName)"
+
+    - task: AzureCLI@2
+      displayName: 'Import docker image'
+      condition: eq(variables['checkBaseTag.newTagFound'], 'true')
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Importing $(baseRegistry)/$(baseImage):$(baseTag) as $(targetImage):$(baseTag)-$(checkBaseTag.sourceDigest) ..."
+          az acr import --force --name $(acrName) --source $(baseRegistry)/$(baseImage):$(baseTag) --image $(targetImage):$(baseTag)-$(checkBaseTag.sourceDigest)
+
+    - task: AzureCLI@2
+      displayName: 'Re-tag new image using the base tag'
+      condition: eq(variables['checkBaseTag.newTagFound'], 'true')
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: 'scriptPath'
+        scriptPath: tag-new-image.sh
+        arguments: >
+          --tag "$(baseTag)"
+          --targetImage "$(targetImage)"
+          --acrName "$(acrName)"
+          --targetRegistry "$(targetRegistry)"
+          --sourceDigest "$(checkBaseTag.sourceDigest)"
+          --acrDigest "$(checkBaseTag.acrDigest)"
+
+- stage: CreateACRCache
+  displayName: "Create ACR Cache"
+  jobs:
+  - job: CreateACRCache
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Create ACR Cache'
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: 'scriptPath'
+        scriptPath: acr-cache.sh
+        arguments: >
+          --acrName "$(acrName)"
+          --subscription "$(serviceConnection)"

@@ -1,7 +1,7 @@
 #
 ## Import new image on base image update
 ##
-name: ACR base image import 
+name: ACR base image import
 trigger:
   - master
 pr: none
@@ -66,14 +66,14 @@ jobs:
       azureSubscription: $(serviceConnection)
       keyVaultName: $(keyvaultName)
       secretsFilter: 'registry-public-username,registry-public-password,registry-slack-webhook'
-  
+
   - task: AzureKeyVault@1
     displayName: 'Get secrets from Keyvault'
     inputs:
       azureSubscription: $(serviceConnectionStg)
       keyVaultName: $(keyvaultNameStg)
       secretsFilter: 'neuvector-admin-username,neuvector-new-admin-password'
-  
+
   - task: AzureCLI@1
     displayName: 'Check base registry if new digest available for tag'
     inputs:
@@ -81,7 +81,7 @@ jobs:
       scriptLocation: 'scriptPath'
       scriptPath: check-base-tag.sh
       arguments: |
-        --baseImage "$(baseImage)" --baseRegistry "$(baseRegistry)" --baseTag "$(baseTag)" --targetImage "$(targetImage)" --acrName "$(acrName)"
+        --sourceImage "$(baseImage)" --sourceRegistry "$(baseRegistry)" --tag "$(baseTag)" --targetImage "$(targetImage)" --acrName "$(acrName)"
 
   - task: AzureCLI@1
     displayName: 'Import docker image'
@@ -91,7 +91,7 @@ jobs:
       scriptLocation: 'inlineScript'
       inlineScript: |
         echo "Importing $(baseRegistry)/$(baseImage):$(baseTag) as $(targetImage):$(baseTag)-$(baseDigest) ..."
-        az acr import --force --name $(acrName) --source $(baseRegistry)/$(baseImage):$(baseTag) --image $(targetImage):$(baseTag)-$(baseDigest) 
+        az acr import --force --name $(acrName) --source $(baseRegistry)/$(baseImage):$(baseTag) --image $(targetImage):$(baseTag)-$(baseDigest)
 
   - task: AzureCLI@1
     displayName: 'Re-tag new image using the base tag'
@@ -101,15 +101,19 @@ jobs:
       scriptLocation: 'scriptPath'
       scriptPath: tag-new-image.sh
       arguments: |
-        --baseTag "$(baseTag)" --targetImage "$(targetImage)" --acrName "$(acrName)" --targetRegistry "$(targetRegistry)" --baseDigest "$(baseDigest)" --acrDigest "$(acrDigest)" 
+        --tag "$(baseTag)" --targetImage "$(targetImage)" --acrName "$(acrName)" --targetRegistry "$(targetRegistry)" --sourceDigest "$(baseDigest)" --acrDigest "$(acrDigest)"
 
 - job: CreateACRCache
   pool:
     vmImage: ubuntu-latest
   steps:
-    - task: AzureCLI@1
+    - task: AzureCLI@2
       displayName: 'Create ACR Cache'
       inputs:
         azureSubscription: $(serviceConnection)
+        scriptType: bash
         scriptLocation: 'scriptPath'
         scriptPath: acr-cache.sh
+        arguments: >
+          --acrName "$(acrName)"
+          --subscription "$(serviceConnection)"
