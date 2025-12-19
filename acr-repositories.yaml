@@ -1,11 +1,6 @@
 # Please update README.md with each new unique repoName added to this file as it represents another supported upstream image repository
 
 rules:
-  postgresql:
-    ruleName: postgresql
-    repoName: bitnami/postgresql
-    registry: docker.io
-    destinationRepo: imported/bitnami/postgresql
   postgres-exporter:
     ruleName: postgres-exporter
     repoName: bitnami/postgres-exporter
@@ -26,36 +21,6 @@ rules:
     repoName: curlimages/curl
     registry: docker.io
     destinationRepo: imported/curlimages/curl
-  elastic-search:
-    ruleName: elastic-search
-    repoName: elasticsearch/elasticsearch
-    registry: docker.io
-    destinationRepo: imported/elastic/elasticsearch
-  external-dns:
-    ruleName: external-dns
-    repoName: bitnami/external-dns
-    registry: docker.io
-    destinationRepo: imported/bitnami/external-dns
-  kubectl:
-    ruleName: kubectl
-    repoName: bitnami/kubectl
-    registry: docker.io
-    destinationRepo: imported/bitnami/kubectl
-  bitnami-redis:
-    ruleName: bitnami-redis
-    repoName: bitnami/redis
-    registry: docker.io
-    destinationRepo: imported/bitnami/redis
-  bitnami-redis-exporter:
-    ruleName: bitnami-redis-exporter
-    repoName: bitnami/redis-exporter
-    registry: docker.io
-    destinationRepo: imported/bitnami/redis-exporter
-  bitnami-redis-sentinel:
-    ruleName: bitnami-redis-sentinel
-    repoName: bitnami/redis-sentinel
-    registry: docker.io
-    destinationRepo: imported/bitnami/redis-sentinel
   pact-broker:
     ruleName: pact-broker
     repoName: dius/pact-broker
@@ -106,21 +71,6 @@ rules:
     repoName: minio/minio
     registry: docker.io
     destinationRepo: imported/minio/minio
-  neuvector-controller:
-    ruleName: neuvector-controller
-    repoName: neuvector/controller
-    registry: docker.io
-    destinationRepo: imported/neuvector/controller
-  neuvector-enforcer:
-    ruleName: neuvector-enforcer
-    repoName: neuvector/enforcer
-    registry: docker.io
-    destinationRepo: imported/neuvector/enforcer
-  neuvector-manager:
-    ruleName: neuvector-manager
-    repoName: neuvector/manager
-    registry: docker.io
-    destinationRepo: imported/neuvector/manager
   neuvector-scanner:
     ruleName: neuvector-scanner
     repoName: neuvector/scanner
@@ -176,11 +126,6 @@ rules:
     repoName: netboxcommunity/netbox
     registry: docker.io
     destinationRepo: imported/netboxcommunity/netbox
-  nodejs:
-    ruleName: nodejs
-    repoName: library/node
-    registry: docker.io
-    destinationRepo: imported/library/node
   nginx:
     ruleName: nginx
     repoName: library/nginx
@@ -201,11 +146,6 @@ rules:
     repoName: willwill/kube-slack
     registry: docker.io
     destinationRepo: imported/willwill/kube-slack
-  jq:
-    ruleName: jq-cache
-    repoName: jqlang/jq
-    registry: ghcr.io
-    destinationRepo: imported/jqlang/jq
   oathtool:
     ruleName: oathtool
     repoName: toolbelt/oathtool
@@ -246,16 +186,6 @@ rules:
     repoName: atmoz/sftp
     registry: docker.io
     destinationRepo: imported/atmoz/sftp
-  clamav:
-    ruleName: citizensadvice-clamav-mock
-    repoName: citizensadvice/clamav-mock
-    registry: docker.io
-    destinationRepo: imported/citizensadvice/clamav-mock
-  ruby:
-    ruleName: library-ruby
-    repoName: library/ruby
-    registry: docker.io
-    destinationRepo: imported/library/ruby
   mikefarah-yq:
     ruleName: mikefarah-yq
     repoName: mikefarah/yq
