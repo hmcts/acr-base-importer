@@ -201,3 +201,23 @@ rules:
     repoName: wiremock/wiremock
     registry: docker.io
     destinationRepo: imported/wiremock/wiremock
+  neuvector-controller:
+    ruleName: neuvector-controller
+    repoName: neuvector/controller
+    registry: docker.io
+    destinationRepo: imported/neuvector/controller
+  neuvector-enforcer:
+    ruleName: neuvector-enforcer
+    repoName: neuvector/enforcer
+    registry: docker.io
+    destinationRepo: imported/neuvector/enforcer
+  neuvector-manager:
+    ruleName: neuvector-manager
+    repoName: neuvector/manager
+    registry: docker.io
+    destinationRepo: imported/neuvector/manager
+  clamav:
+    ruleName: citizensadvice-clamav-mock
+    repoName: citizensadvice/clamav-mock
+    registry: docker.io
+    destinationRepo: imported/citizensadvice/clamav-mock
