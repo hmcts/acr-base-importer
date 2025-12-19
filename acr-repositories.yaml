@@ -221,3 +221,8 @@ rules:
     repoName: citizensadvice/clamav-mock
     registry: docker.io
     destinationRepo: imported/citizensadvice/clamav-mock
+  elastic-search:
+    ruleName: elastic-search
+    repoName: elasticsearch
+    registry: docker.io
+    destinationRepo: imported/elastic/elasticsearch
