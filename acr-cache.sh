@@ -62,30 +62,31 @@ for key in $(echo "$RULES_CONFIG" | jq -r '.rules | keys | .[]'); do
         --registry "$acrName" \
         --query "name" -o tsv 2>/dev/null | grep -q "$RULE_NAME"; then
         echo "   ✓ Cache rule '$RULE_NAME' already exists, skipping creation"
-        ((skipped_count++))
+        ((skipped_count++)) || true
         continue
     fi
     
-    # Create the cache rule
+    # Create the cache rule - disable exit on error temporarily
+    set +e
     OUTPUT=$(az acr cache-rule create \
         -r "$acrName" \
         -n "$RULE_NAME" \
         -s "$REGISTRY/$REPO_NAME" \
         -t "$DESTINATION_NAME" \
-        -c dockerhub 2>&1) || true
-    
-    EXIT_CODE=${PIPESTATUS[0]}
+        -c dockerhub 2>&1)
+    EXIT_CODE=$?
+    set -e
     
     if [ $EXIT_CODE -eq 0 ]; then
         echo "   ✓ Cache rule '$RULE_NAME' created successfully"
-        ((created_count++))
+        ((created_count++)) || true
     elif echo "$OUTPUT" | grep -q "ResourcePropertiesImmutable"; then
         echo "   ✓ Cache rule '$RULE_NAME' already exists with same properties, skipping"
-        ((skipped_count++))
+        ((skipped_count++)) || true
     else
         echo "   ✗ ERROR: Failed to create cache rule '$RULE_NAME'"
         echo "   Error details: $OUTPUT" >&2
-        ((failed_count++))
+        ((failed_count++)) || true
         # Continue processing other rules instead of failing immediately
     fi
 done
