@@ -57,7 +57,7 @@ for key in $(echo "$RULES_CONFIG" | jq -r '.rules | keys | .[]'); do
     echo "Processing ACR Cache Rule for $key, source: $REGISTRY/$REPO_NAME, destination: $DESTINATION_NAME..."
     
     # Check if cache rule already exists
-    if az acr cache-rule show \
+    if az acr cache show \
         --name "$RULE_NAME" \
         --registry "$acrName" \
         --query "name" -o tsv 2>/dev/null | grep -q "$RULE_NAME"; then
@@ -66,9 +66,8 @@ for key in $(echo "$RULES_CONFIG" | jq -r '.rules | keys | .[]'); do
         continue
     fi
     
-    # Create the cache rule - disable exit on error temporarily
-    set +e
-    OUTPUT=$(az acr cache-rule create \
+    # Create the cache rule
+    OUTPUT=$(az acr cache create \
         -r "$acrName" \
         -n "$RULE_NAME" \
         -s "$REGISTRY/$REPO_NAME" \
