@@ -270,9 +270,9 @@ parameters:
 
 variables:
 - name: acrName
-  value: 'hmctspublic'
+  value: 'hmctsprod'
 - name: targetRegistry
-  value: 'hmctspublic.azurecr.io'
+  value: 'hmctsprod.azurecr.io'
 - name: keyvaultName
   value: 'infra-vault-prod'
 - name: serviceConnection
