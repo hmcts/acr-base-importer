@@ -278,7 +278,7 @@ variables:
 - name: serviceConnection
   value: 'DCD-CNP-PROD'
 - name: trivyVersion
-  value: '0.68.1'
+  value: '0.68.2'
 - name: severityThreshold
   value: 'CRITICAL,HIGH'
 - name: trivyTimeout
