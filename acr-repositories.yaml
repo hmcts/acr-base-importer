@@ -6,6 +6,11 @@ rules:
     repoName: bitnami/postgres-exporter
     registry: docker.io
     destinationRepo: imported/postgres-exporter
+  postgres-exporter-prometheuscommunity:
+    ruleName: postgres-exporter-prometheuscommunity
+    repoName: prometheuscommunity/postgres-exporter
+    registry: docker.io
+    destinationRepo: imported/prometheuscommunity/postgres-exporter
   postgres:
     ruleName: postgres
     repoName: library/postgres
