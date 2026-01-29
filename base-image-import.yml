@@ -13,8 +13,8 @@ schedules:
     - master
   always: 'true'
 variables:
-  acrName: hmctssandbox
-  targetRegistry: hmctssandbox.azurecr.io
+  acrName: hmctspublic
+  targetRegistry: hmctspublic.azurecr.io
   keyvaultName: 'infra-vault-prod'
   serviceConnection: 'DCD-CNP-PROD'
   keyvaultNameStg: 'cftapps-stg'
