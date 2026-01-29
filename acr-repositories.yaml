@@ -226,3 +226,8 @@ rules:
     repoName: elasticsearch
     registry: docker.io
     destinationRepo: imported/elastic/elasticsearch
+  logstash:
+    ruleName: logstash
+    repoName: logstash
+    registry: docker.io
+    destinationRepo: imported/elastic/logstash

@@ -18,7 +18,8 @@ Below is a table of upstream image repositories that will have supported cache r
 | `dius/pact-broker`                     | `hmctspublic.azurecr.io/imported/dius/pact-broker`                     |
 | `drycc/service-catalog`                | `hmctspublic.azurecr.io/imported/dyrcc/service-catalog`                |
 | `dynatrace/dynatrace-operator`         | `hmctspublic.azurecr.io/imported/dynatrace/dynatrace-operator`         |
-| `elasticsearch/elasticsearch`          | `hmctspublic.azurecr.io/imported/elasticsearch/elasticsearch`          |
+| `elastic/elasticsearch`                | `hmctspublic.azurecr.io/imported/elastic/elasticsearch`                |
+| `elastic/logstash`                     | `hmctspublic.azurecr.io/imported/elastic/logstash`                     |
 | `fluent/fluent-bit`                    | `hmctspublic.azurecr.io/imported/fluent/fluent-bit`                    |
 | `grafana/grafana`                      | `hmctspublic.azurecr.io/imported/grafana`                              |
 | `jimmidyson/configmap-reload`          | `hmctspublic.azurecr.io/imported/jimmidyson/configmap-reload`          |
