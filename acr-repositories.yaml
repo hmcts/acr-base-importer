@@ -231,3 +231,8 @@ rules:
     repoName: logstash
     registry: docker.io
     destinationRepo: imported/elastic/logstash
+  eclipse-temurin:
+    ruleName: eclipse-temurin
+    repoName: library/eclipse-temurin
+    registry: docker.io
+    destinationRepo: imported/eclipse-temurin
