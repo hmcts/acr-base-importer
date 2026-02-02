@@ -75,6 +75,11 @@ stages:
           baseRegistry: gcr.io
           baseTag: debug
           targetImage: imported/distroless/java17
+        jenkins-build-agent-jdk21:
+          baseImage: jenkins/inbound-agent
+          baseRegistry: docker.io
+          baseTag: trixie-jdk21
+          targetImage: imported/jenkins/build-agent
     steps:
     - task: AzureKeyVault@2
       displayName: 'Get secrets from Keyvault'
