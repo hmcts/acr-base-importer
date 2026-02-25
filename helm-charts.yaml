@@ -7,5 +7,8 @@ charts:
     repo_name: external-dns
     chart_name: external-dns
     acr_destination: imported/k8s-sigs-external-dns-chart
+    acr_registries:
+      - hmctspublic
+      - hmctsprod
     # Optional: specify versions to sync. If omitted, will sync all new versions
     # version_pattern: "1.*"  # e.g., only sync 1.x versions
