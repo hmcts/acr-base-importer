@@ -2,9 +2,12 @@
 ## Import new image on base image update
 ##
 name: ACR base image import
+
 trigger:
   - master
+
 pr: none
+
 schedules:
 - cron: '0 1 * * *'
   displayName: Daily build
@@ -12,111 +15,146 @@ schedules:
     include:
     - master
   always: 'true'
+
+parameters:
+  - name: environment
+    displayName: Environment
+    type: string
+    default: prod
+    values:
+      - prod
+      - sbox
+
 variables:
-  acrName: hmctspublic
-  targetRegistry: hmctspublic.azurecr.io
-  keyvaultName: 'infra-vault-prod'
-  serviceConnection: 'DCD-CNP-PROD'
+  ${{ if eq(parameters.environment, 'prod') }}:
+    acrName: hmctspublic
+    targetRegistry: hmctspublic.azurecr.io
+    keyvaultName: 'infra-vault-prod'
+    serviceConnection: 'DCD-CNP-PROD'
+  ${{ if eq(parameters.environment, 'sbox') }}:
+    acrName: hmctspublicsbox
+    targetRegistry: hmctspublicsbox.azurecr.io
+    keyvaultName: 'infra-vault-sandbox'
+    serviceConnection: 'DCD-CFT-Sandbox'
   keyvaultNameStg: 'cftapps-stg'
   serviceConnectionStg: 'DCD-CFTAPPS-STG'
   neuvectorController: 'https://cft-neuvector01-api.aat.platform.hmcts.net'
 
-jobs:
-- job: ImportBaseImages
-  pool:
-    name: hmcts-cftptl-agent-pool
-  strategy:
-    maxParallel: 5
-    matrix:
-      openjdk-25-distroless:
-        baseImage: distroless/java25-debian13
-        baseRegistry: gcr.io
-        baseTag: latest
-        targetImage: imported/distroless/java25
-      base-debian13-distroless:
-        baseImage: distroless/base-debian13
-        baseRegistry: gcr.io
-        baseTag: latest
-        targetImage: imported/distroless/base-debian13
-      openjdk-25-debug-distroless:
-        baseImage: distroless/java25-debian13
-        baseRegistry: gcr.io
-        baseTag: debug
-        targetImage: imported/distroless/java25
-      openjdk-21-distroless:
-        baseImage: distroless/java21-debian12
-        baseRegistry: gcr.io
-        baseTag: latest
-        targetImage: imported/distroless/java21
-      openjdk-21-debug-distroless:
-        baseImage: distroless/java21-debian12
-        baseRegistry: gcr.io
-        baseTag: debug
-        targetImage: imported/distroless/java21
-      openjdk-17-distroless:
-        baseImage: distroless/java17-debian12
-        baseRegistry: gcr.io
-        baseTag: latest
-        targetImage: imported/distroless/java17
-      openjdk-17-debug-distroless:
-        baseImage: distroless/java17-debian12
-        baseRegistry: gcr.io
-        baseTag: debug
-        targetImage: imported/distroless/java17
-      jenkins-build-agent-jdk21:
-        baseImage: jenkins/inbound-agent
-        baseRegistry: docker.io
-        baseTag: trixie-jdk21
-        targetImage: imported/jenkins/build-agent
+stages:
+- stage: ImportBaseImages
+  displayName: "Import Base Images"
+  jobs:
+  - job: ImportBaseImages
+    pool:
+      name: hmcts-cftptl-agent-pool
+    strategy:
+      maxParallel: 5
+      matrix:
+        openjdk-25-distroless:
+          baseImage: distroless/java25-debian13
+          baseRegistry: gcr.io
+          baseTag: latest
+          targetImage: imported/distroless/java25
+        base-debian13-distroless:
+          baseImage: distroless/base-debian13
+          baseRegistry: gcr.io
+          baseTag: latest
+          targetImage: imported/distroless/base-debian13
+        openjdk-25-debug-distroless:
+          baseImage: distroless/java25-debian13
+          baseRegistry: gcr.io
+          baseTag: debug
+          targetImage: imported/distroless/java25
+        openjdk-21-distroless:
+          baseImage: distroless/java21-debian12
+          baseRegistry: gcr.io
+          baseTag: latest
+          targetImage: imported/distroless/java21
+        openjdk-21-debug-distroless:
+          baseImage: distroless/java21-debian12
+          baseRegistry: gcr.io
+          baseTag: debug
+          targetImage: imported/distroless/java21
+        openjdk-17-distroless:
+          baseImage: distroless/java17-debian12
+          baseRegistry: gcr.io
+          baseTag: latest
+          targetImage: imported/distroless/java17
+        openjdk-17-debug-distroless:
+          baseImage: distroless/java17-debian12
+          baseRegistry: gcr.io
+          baseTag: debug
+          targetImage: imported/distroless/java17
+        jenkins-build-agent-jdk21:
+          baseImage: jenkins/inbound-agent
+          baseRegistry: docker.io
+          baseTag: trixie-jdk21
+          targetImage: imported/jenkins/build-agent
 
-  steps:
-  - task: AzureKeyVault@1
-    displayName: 'Get secrets from Keyvault'
-    inputs:
-      azureSubscription: $(serviceConnection)
-      keyVaultName: $(keyvaultName)
-      secretsFilter: 'registry-public-username,registry-public-password,registry-slack-webhook'
+    steps:
+    - task: AzureKeyVault@2
+      displayName: 'Get secrets from Keyvault'
+      inputs:
+        azureSubscription: $(serviceConnection)
+        keyVaultName: $(keyvaultName)
+        secretsFilter: 'registry-public-username,registry-public-password,registry-slack-webhook'
 
-  - task: AzureKeyVault@1
-    displayName: 'Get secrets from Keyvault'
-    inputs:
-      azureSubscription: $(serviceConnectionStg)
-      keyVaultName: $(keyvaultNameStg)
-      secretsFilter: 'neuvector-admin-username,neuvector-new-admin-password'
+    - task: AzureKeyVault@2
+      displayName: 'Get secrets from Keyvault Staging'
+      inputs:
+        azureSubscription: $(serviceConnectionStg)
+        keyVaultName: $(keyvaultNameStg)
+        secretsFilter: 'neuvector-admin-username,neuvector-new-admin-password'
 
-  - task: AzureCLI@1
-    displayName: 'Check base registry if new digest available for tag'
-    inputs:
-      azureSubscription: $(serviceConnection)
-      scriptLocation: 'scriptPath'
-      scriptPath: check-base-tag.sh
-      arguments: |
-        --sourceImage "$(baseImage)" --sourceRegistry "$(baseRegistry)" --tag "$(baseTag)" --targetImage "$(targetImage)" --acrName "$(acrName)"
+    - task: AzureCLI@2
+      displayName: 'Check base registry if new digest available for tag'
+      name: checkBaseTag
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: 'scriptPath'
+        scriptPath: check-base-tag.sh
+        arguments: >
+          --sourceImage "$(baseImage)"
+          --sourceRegistry "$(baseRegistry)"
+          --tag "$(baseTag)"
+          --targetImage "$(targetImage)"
+          --acrName "$(acrName)"
 
-  - task: AzureCLI@1
-    displayName: 'Import docker image'
-    condition: eq(variables['newTagFound'], 'true')
-    inputs:
-      azureSubscription: $(serviceConnection)
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        echo "Importing $(baseRegistry)/$(baseImage):$(baseTag) as $(targetImage):$(baseTag)-$(baseDigest) ..."
-        az acr import --force --name $(acrName) --source $(baseRegistry)/$(baseImage):$(baseTag) --image $(targetImage):$(baseTag)-$(baseDigest)
+    - task: AzureCLI@2
+      displayName: 'Import docker image'
+      condition: eq(variables['checkBaseTag.newTagFound'], 'true')
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Importing $(baseRegistry)/$(baseImage):$(baseTag) as $(targetImage):$(baseTag)-$(checkBaseTag.sourceDigest) ..."
+          az acr import --force --name $(acrName) --source $(baseRegistry)/$(baseImage):$(baseTag) --image $(targetImage):$(baseTag)-$(checkBaseTag.sourceDigest)
 
-  - task: AzureCLI@1
-    displayName: 'Re-tag new image using the base tag'
-    condition: eq(variables['newTagFound'], 'true')
-    inputs:
-      azureSubscription: $(serviceConnection)
-      scriptLocation: 'scriptPath'
-      scriptPath: tag-new-image.sh
-      arguments: |
-        --tag "$(baseTag)" --targetImage "$(targetImage)" --acrName "$(acrName)" --targetRegistry "$(targetRegistry)" --sourceDigest "$(baseDigest)" --acrDigest "$(acrDigest)"
+    - task: AzureCLI@2
+      displayName: 'Re-tag new image using the base tag'
+      condition: eq(variables['checkBaseTag.newTagFound'], 'true')
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: 'scriptPath'
+        scriptPath: tag-new-image.sh
+        arguments: >
+          --tag "$(baseTag)"
+          --targetImage "$(targetImage)"
+          --acrName "$(acrName)"
+          --targetRegistry "$(targetRegistry)"
+          --sourceDigest "$(checkBaseTag.sourceDigest)"
+          --acrDigest "$(checkBaseTag.acrDigest)"
 
-- job: CreateACRCache
-  pool:
-    vmImage: ubuntu-latest
-  steps:
+- stage: CreateACRCache
+  displayName: "Create ACR Cache"
+  jobs:
+  - job: CreateACRCache
+    pool:
+      vmImage: ubuntu-latest
+    steps:
     - task: AzureCLI@2
       displayName: 'Create ACR Cache'
       inputs:
