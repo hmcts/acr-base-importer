@@ -86,12 +86,21 @@ for key in $(echo "$RULES_CONFIG" | jq -r '.rules | keys | .[]'); do
     fi
     
     # Create the cache rule
-    OUTPUT=$(az acr cache create \
-        -r "$acrName" \
-        -n "$RULE_NAME" \
-        -s "$REGISTRY/$REPO_NAME" \
-        -t "$DESTINATION_NAME" \
-        $CRED_ARGS 2>&1)
+    set +e
+    if [ -n "$CRED_ARGS" ]; then
+        OUTPUT=$(az acr cache create \
+            -r "$acrName" \
+            -n "$RULE_NAME" \
+            -s "$REGISTRY/$REPO_NAME" \
+            -t "$DESTINATION_NAME" \
+            $CRED_ARGS 2>&1)
+    else
+        OUTPUT=$(az acr cache create \
+            -r "$acrName" \
+            -n "$RULE_NAME" \
+            -s "$REGISTRY/$REPO_NAME" \
+            -t "$DESTINATION_NAME" 2>&1)
+    fi
     EXIT_CODE=$?
     set -e
     
