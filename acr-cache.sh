@@ -56,6 +56,25 @@ for key in $(echo "$RULES_CONFIG" | jq -r '.rules | keys | .[]'); do
 
     echo "Processing ACR Cache Rule for $key, source: $REGISTRY/$REPO_NAME, destination: $DESTINATION_NAME..."
     
+    # Determine if credentials are needed based on registry
+    case "$REGISTRY" in
+        "docker.io")
+            CRED_ARGS="-c dockerhub"
+            ;;
+        "mcr.microsoft.com")
+            CRED_ARGS="-c dockerhub"
+            ;;
+        "registry.k8s.io"|"gcr.io")
+            # Public registries don't need credentials
+            CRED_ARGS=""
+            ;;
+        *)
+            # Default: no credentials for unknown registries
+            CRED_ARGS=""
+            ;;
+    esac
+
+
     # Check if cache rule already exists
     if az acr cache show \
         --name "$RULE_NAME" \
@@ -72,7 +91,7 @@ for key in $(echo "$RULES_CONFIG" | jq -r '.rules | keys | .[]'); do
         -n "$RULE_NAME" \
         -s "$REGISTRY/$REPO_NAME" \
         -t "$DESTINATION_NAME" \
-        -c dockerhub 2>&1)
+        $CRED_ARGS 2>&1)
     EXIT_CODE=$?
     set -e
     
