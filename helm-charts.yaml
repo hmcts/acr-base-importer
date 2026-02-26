@@ -4,7 +4,7 @@
 charts:
   - name: external-dns
     repo_url: https://kubernetes-sigs.github.io/external-dns/
-    repo_name: external-dns
+    repo_name: external-dns-chart
     chart_name: external-dns
     acr_destination: imported/k8s-sigs
     acr_registries:
