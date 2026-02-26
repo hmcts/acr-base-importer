@@ -118,9 +118,12 @@ jobs:
               echo "Processing ACR: $ACR_NAME"
               echo "------------------------------------------"
               
+              # Helm appends the chart name to the destination path
+              ACR_REPO_PATH="${ACR_DEST}/${CHART_NAME}"
+              
               # Ensure ACR repository exists by trying to list tags (will fail silently if doesn't exist)
-              echo "Checking ACR repository: ${ACR_NAME}.azurecr.io/$ACR_DEST"
-              ACR_VERSIONS=$(az acr repository show-tags --name "$ACR_NAME" --repository "$ACR_DEST" --output json 2>/dev/null | jq -r '.[]' | sort || echo "")
+              echo "Checking ACR repository: ${ACR_NAME}.azurecr.io/$ACR_REPO_PATH"
+              ACR_VERSIONS=$(az acr repository show-tags --name "$ACR_NAME" --repository "$ACR_REPO_PATH" --output json 2>/dev/null | jq -r '.[]' | sort || echo "")
               
               if [ -z "$ACR_VERSIONS" ]; then
                 echo "ACR repository doesn't exist yet or has no tags"
