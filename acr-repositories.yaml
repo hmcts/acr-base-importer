@@ -240,4 +240,4 @@ rules:
     ruleName: external-dns
     repoName: external-dns/external-dns
     registry: registry.k8s.io
-    destinationRepo: imported/k8s-sigs-external-dns/external-dns
+    destinationRepo: imported/k8s-sigs/external-dns
