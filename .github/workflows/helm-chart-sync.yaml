@@ -24,8 +24,12 @@ jobs:
       
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y jq yq
+          # Install mikefarah/yq (Go version)
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          
+          # Verify it's the correct version
+          yq --version
       
       - name: Azure Login
         uses: azure/login@v2
