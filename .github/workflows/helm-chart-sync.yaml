@@ -95,12 +95,11 @@ jobs:
             echo "Target ACRs: ${ACR_REGISTRIES[@]}"
             echo "=========================================="
             
-            # Add helm repo
-            helm repo add "$REPO_NAME" "$REPO_URL" || true
-            helm repo update "$REPO_NAME"
+            # Add helm repo (suppress output)
+            helm repo add "$REPO_NAME" "$REPO_URL" > /dev/null 2>&1 || true
+            helm repo update "$REPO_NAME" > /dev/null 2>&1
             
             # Get all available versions from upstream
-            echo "Fetching available versions from upstream..."
             AVAILABLE_VERSIONS=$(helm search repo "$REPO_NAME/$CHART_NAME" --versions -o json | jq -r '.[].version')
             
             if [ -z "$AVAILABLE_VERSIONS" ]; then
@@ -108,32 +107,16 @@ jobs:
               continue
             fi
             
-            echo "Available versions:"
-            echo "$AVAILABLE_VERSIONS"
+            TOTAL_AVAILABLE=$(echo "$AVAILABLE_VERSIONS" | wc -l | tr -d ' ')
+            echo "Found $TOTAL_AVAILABLE version(s) upstream (latest: $(echo "$AVAILABLE_VERSIONS" | head -1))"
             
             # Loop through each ACR registry
             for ACR_NAME in "${ACR_REGISTRIES[@]}"; do
-              echo ""
-              echo "------------------------------------------"
-              echo "Processing ACR: $ACR_NAME"
-              echo "------------------------------------------"
-              
               # Helm appends the chart name to the destination path
               ACR_REPO_PATH="${ACR_DEST}/${CHART_NAME}"
               
-              # Ensure ACR repository exists by trying to list tags (will fail silently if doesn't exist)
-              echo "Checking ACR repository: ${ACR_NAME}.azurecr.io/$ACR_REPO_PATH"
+              # Get existing versions from ACR
               ACR_VERSIONS=$(az acr repository show-tags --name "$ACR_NAME" --repository "$ACR_REPO_PATH" --output json 2>/dev/null | jq -r '.[]' | sort || echo "")
-              
-              if [ -z "$ACR_VERSIONS" ]; then
-                echo "ACR repository doesn't exist yet or has no tags"
-              else
-                echo "Existing versions in ACR ($(echo "$ACR_VERSIONS" | wc -l | tr -d ' ') total):"
-                echo "$ACR_VERSIONS" | head -10
-                if [ $(echo "$ACR_VERSIONS" | wc -l) -gt 10 ]; then
-                  echo "... and $(($(echo "$ACR_VERSIONS" | wc -l) - 10)) more"
-                fi
-              fi
               
               # Sync each version
               SYNCED_COUNT=0
@@ -159,30 +142,37 @@ jobs:
                 done <<< "$ACR_VERSIONS"
                 
                 if [ $VERSION_EXISTS -eq 1 ]; then
-                  echo "    ✓ Version $VERSION already exists in $ACR_NAME"
                   ((SKIPPED_COUNT++))
                   continue
                 fi
                 
-                echo "    → Syncing version $VERSION to $ACR_NAME..."
+                # Only show output for versions we're actually syncing
+                if [ $SYNCED_COUNT -eq 0 ]; then
+                  echo ""
+                  echo "------------------------------------------"
+                  echo "Syncing to ACR: $ACR_NAME"
+                  echo "------------------------------------------"
+                fi
+                
+                echo "  → Syncing version $VERSION..."
                 
                 # Create temp directory for this chart
                 TEMP_DIR=$(mktemp -d)
                 cd "$TEMP_DIR"
                 
-                # Pull chart from upstream
-                if helm pull "$REPO_NAME/$CHART_NAME" --version "$VERSION"; then
+                # Pull chart from upstream (suppress output)
+                if helm pull "$REPO_NAME/$CHART_NAME" --version "$VERSION" > /dev/null 2>&1; then
                   CHART_FILE="${CHART_NAME}-${VERSION}.tgz"
                   
-                  # Push to ACR
-                  if helm push "$CHART_FILE" "oci://${ACR_NAME}.azurecr.io/$ACR_DEST"; then
-                    echo "    ✓ Successfully pushed $VERSION to $ACR_NAME"
+                  # Push to ACR (suppress output)
+                  if helm push "$CHART_FILE" "oci://${ACR_NAME}.azurecr.io/$ACR_DEST" > /dev/null 2>&1; then
+                    echo "  ✓ Successfully pushed $VERSION to $ACR_NAME"
                     ((SYNCED_COUNT++))
                   else
-                    echo "    ✗ Failed to push $VERSION to $ACR_NAME"
+                    echo "  ✗ Failed to push $VERSION to $ACR_NAME"
                   fi
                 else
-                  echo "    ✗ Failed to pull $VERSION from upstream"
+                  echo "  ✗ Failed to pull $VERSION from upstream"
                 fi
                 
                 # Cleanup
@@ -190,10 +180,15 @@ jobs:
                 rm -rf "$TEMP_DIR"
               done
               
-              echo ""
-              echo "Summary for $NAME in $ACR_NAME:"
-              echo "  - Synced: $SYNCED_COUNT new version(s)"
-              echo "  - Skipped: $SKIPPED_COUNT existing/filtered version(s)"
+              # Only show summary if there was activity
+              if [ $SYNCED_COUNT -gt 0 ] || [ $SKIPPED_COUNT -eq 0 ]; then
+                echo ""
+                echo "Summary for $NAME in $ACR_NAME:"
+                echo "  - Synced: $SYNCED_COUNT new version(s)"
+                if [ $SKIPPED_COUNT -gt 0 ]; then
+                  echo "  - Skipped: $SKIPPED_COUNT existing version(s)"
+                fi
+              fi
               
               # Track if we had any failures
               if [ $SYNCED_COUNT -eq 0 ] && [ $(echo "$AVAILABLE_VERSIONS" | wc -l) -gt $(echo "$ACR_VERSIONS" | wc -l) ]; then
