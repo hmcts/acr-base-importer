@@ -56,7 +56,9 @@ jobs:
       
       - name: Sync Helm Charts
         run: |
-          set -e
+          # Don't exit on error - we want to try all charts/versions/ACRs
+          set +e
+          OVERALL_SUCCESS=0
           
           # Read the helm-charts.yaml file
           if [ ! -f helm-charts.yaml ]; then
@@ -178,6 +180,12 @@ jobs:
               echo "Summary for $NAME in $ACR_NAME:"
               echo "  - Synced: $SYNCED_COUNT new version(s)"
               echo "  - Skipped: $SKIPPED_COUNT existing/filtered version(s)"
+              
+              # Track if we had any failures
+              if [ $SYNCED_COUNT -eq 0 ] && [ $(echo "$AVAILABLE_VERSIONS" | wc -l) -gt $(echo "$ACR_VERSIONS" | wc -l) ]; then
+                echo "  ⚠ Warning: Expected to sync versions but none were synced"
+                OVERALL_SUCCESS=1
+              fi
             done
           done
           
@@ -185,6 +193,9 @@ jobs:
           echo "=========================================="
           echo "Sync complete!"
           echo "=========================================="
+          
+          # Exit with error if we had issues
+          exit $OVERALL_SUCCESS
       
       - name: Notify on failure
         if: failure()
