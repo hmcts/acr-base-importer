@@ -50,11 +50,11 @@ stages:
           baseRegistry: gcr.io
           baseTag: latest
           targetImage: imported/distroless/java25
-        debian13-distroless:
-          baseImage: distroless/debian13
+        base-debian13-distroless:
+          baseImage: distroless/base-debian13
           baseRegistry: gcr.io
           baseTag: latest
-          targetImage: imported/distroless/debian13
+          targetImage: imported/distroless/base-debian13
         openjdk-25-debug-distroless:
           baseImage: distroless/java25-debian13
           baseRegistry: gcr.io
