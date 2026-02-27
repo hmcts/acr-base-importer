@@ -55,25 +55,6 @@ for key in $(echo "$RULES_CONFIG" | jq -r '.rules | keys | .[]'); do
     DESTINATION_NAME=$(echo "$RULES_CONFIG" | jq -r '.rules | ."'"$key"'" | .destinationRepo')
 
     echo "Processing ACR Cache Rule for $key, source: $REGISTRY/$REPO_NAME, destination: $DESTINATION_NAME..."
-    
-    # Determine if credentials are needed based on registry
-    case "$REGISTRY" in
-        "docker.io")
-            CRED_ARGS="-c dockerhub"
-            ;;
-        "mcr.microsoft.com")
-            CRED_ARGS="-c dockerhub"
-            ;;
-        "registry.k8s.io"|"gcr.io")
-            # Public registries don't need credentials
-            CRED_ARGS=""
-            ;;
-        *)
-            # Default: no credentials for unknown registries
-            CRED_ARGS=""
-            ;;
-    esac
-
 
     # Check if cache rule already exists
     if az acr cache show \
@@ -87,20 +68,12 @@ for key in $(echo "$RULES_CONFIG" | jq -r '.rules | keys | .[]'); do
     
     # Create the cache rule
     set +e
-    if [ -n "$CRED_ARGS" ]; then
-        OUTPUT=$(az acr cache create \
-            -r "$acrName" \
-            -n "$RULE_NAME" \
-            -s "$REGISTRY/$REPO_NAME" \
-            -t "$DESTINATION_NAME" \
-            $CRED_ARGS 2>&1)
-    else
-        OUTPUT=$(az acr cache create \
-            -r "$acrName" \
-            -n "$RULE_NAME" \
-            -s "$REGISTRY/$REPO_NAME" \
-            -t "$DESTINATION_NAME" 2>&1)
-    fi
+    OUTPUT=$(az acr cache create \
+        -r "$acrName" \
+        -n "$RULE_NAME" \
+        -s "$REGISTRY/$REPO_NAME" \
+        -t "$DESTINATION_NAME" \
+        -c dockerhub 2>&1)
     EXIT_CODE=$?
     set -e
     
