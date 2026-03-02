@@ -161,18 +161,22 @@ jobs:
                 cd "$TEMP_DIR"
                 
                 # Pull chart from upstream (suppress output)
-                if helm pull "$REPO_NAME/$CHART_NAME" --version "$VERSION" > /dev/null 2>&1; then
+                PULL_OUTPUT=$(helm pull "$REPO_NAME/$CHART_NAME" --version "$VERSION" 2>&1)
+                if [ $? -eq 0 ]; then
                   CHART_FILE="${CHART_NAME}-${VERSION}.tgz"
                   
-                  # Push to ACR (suppress output)
-                  if helm push "$CHART_FILE" "oci://${ACR_NAME}.azurecr.io/$ACR_DEST" > /dev/null 2>&1; then
+                  # Push to ACR (capture errors)
+                  PUSH_OUTPUT=$(helm push "$CHART_FILE" "oci://${ACR_NAME}.azurecr.io/$ACR_DEST" 2>&1)
+                  if [ $? -eq 0 ]; then
                     echo "  ✓ Successfully pushed $VERSION to $ACR_NAME"
                     ((SYNCED_COUNT++))
                   else
                     echo "  ✗ Failed to push $VERSION to $ACR_NAME"
+                    echo "     Error: $PUSH_OUTPUT"
                   fi
                 else
                   echo "  ✗ Failed to pull $VERSION from upstream"
+                  echo "     Error: $PULL_OUTPUT"
                 fi
                 
                 # Cleanup
