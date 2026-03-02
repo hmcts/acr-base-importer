@@ -76,8 +76,12 @@ jobs:
             REPO_URL=$(yq eval ".charts[$i].repo_url" helm-charts.yaml)
             REPO_NAME=$(yq eval ".charts[$i].repo_name" helm-charts.yaml)
             CHART_NAME=$(yq eval ".charts[$i].chart_name" helm-charts.yaml)
-            ACR_DEST=$(yq eval ".charts[$i].acr_destination" helm-charts.yaml)
+            ACR_REPOSITORY=$(yq eval ".charts[$i].acr_repository" helm-charts.yaml)
             VERSION_PATTERN=$(yq eval ".charts[$i].version_pattern // \"*\"" helm-charts.yaml)
+            
+            # Extract base path and target chart name from acr_repository
+            ACR_BASE_PATH=$(dirname "$ACR_REPOSITORY")
+            ACR_CHART_NAME=$(basename "$ACR_REPOSITORY")
             
             # Get ACR registries for this chart
             ACR_REGISTRY_COUNT=$(yq eval ".charts[$i].acr_registries | length" helm-charts.yaml)
@@ -90,8 +94,8 @@ jobs:
             echo "=========================================="
             echo "Processing: $NAME"
             echo "Repo: $REPO_URL"
-            echo "Chart: $CHART_NAME"
-            echo "ACR Destination: $ACR_DEST"
+            echo "Upstream Chart: $CHART_NAME"
+            echo "ACR Repository: $ACR_REPOSITORY"
             echo "Target ACRs: ${ACR_REGISTRIES[@]}"
             echo "=========================================="
             
@@ -112,8 +116,8 @@ jobs:
             
             # Loop through each ACR registry
             for ACR_NAME in "${ACR_REGISTRIES[@]}"; do
-              # Helm appends the chart name to the destination path
-              ACR_REPO_PATH="${ACR_DEST}/${CHART_NAME}"
+              # Full ACR repository path
+              ACR_REPO_PATH="$ACR_REPOSITORY"
               
               # Get existing versions from ACR
               ACR_VERSIONS=$(az acr repository show-tags --name "$ACR_NAME" --repository "$ACR_REPO_PATH" --output json 2>/dev/null | jq -r '.[]' | sort || echo "")
@@ -165,8 +169,27 @@ jobs:
                 if [ $? -eq 0 ]; then
                   CHART_FILE="${CHART_NAME}-${VERSION}.tgz"
                   
+                  # Rename the chart to match the desired ACR repository name
+                  if [ "$ACR_CHART_NAME" != "$CHART_NAME" ]; then
+                    # Extract the chart
+                    tar -xzf "$CHART_FILE"
+                    
+                    # Modify Chart.yaml to change the name
+                    yq eval ".name = \"$ACR_CHART_NAME\"" -i "$CHART_NAME/Chart.yaml"
+                    
+                    # Rename the directory
+                    mv "$CHART_NAME" "$ACR_CHART_NAME"
+                    
+                    # Repackage with new name
+                    helm package "$ACR_CHART_NAME" > /dev/null
+                    rm -rf "$ACR_CHART_NAME"
+                    
+                    # Update the chart file name
+                    CHART_FILE="${ACR_CHART_NAME}-${VERSION}.tgz"
+                  fi
+                  
                   # Push to ACR (capture errors)
-                  PUSH_OUTPUT=$(helm push "$CHART_FILE" "oci://${ACR_NAME}.azurecr.io/$ACR_DEST" 2>&1)
+                  PUSH_OUTPUT=$(helm push "$CHART_FILE" "oci://${ACR_NAME}.azurecr.io/$ACR_BASE_PATH" 2>&1)
                   if [ $? -eq 0 ]; then
                     echo "  ✓ Successfully pushed $VERSION to $ACR_NAME"
                     ((SYNCED_COUNT++))

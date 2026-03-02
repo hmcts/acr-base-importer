@@ -4,9 +4,9 @@
 charts:
   - name: external-dns
     repo_url: https://kubernetes-sigs.github.io/external-dns/
-    repo_name: external-dns-chart
-    chart_name: external-dns
-    acr_destination: imported/k8s-sigs
+    repo_name: external-dns-chart  # Local name for 'helm repo add'
+    chart_name: external-dns  # The upstream chart name
+    acr_repository: imported/k8s-sigs/external-dns-chart  # Full repository path in ACR
     acr_registries:
       - hmctspublic
       - hmctsprod
