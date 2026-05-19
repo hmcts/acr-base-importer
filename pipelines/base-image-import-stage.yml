@@ -60,9 +60,9 @@ stages:
           scriptLocation: scriptPath
           scriptPath: $(System.DefaultWorkingDirectory)/scripts/check-base-tag.sh
           arguments: >
-            --baseImage "${{ image.baseImage }}"
-            --baseRegistry "${{ image.baseRegistry }}"
-            --baseTag "${{ image.baseTag }}"
+            --sourceImage "${{ image.baseImage }}"
+            --sourceRegistry "${{ image.baseRegistry }}"
+            --tag "${{ image.baseTag }}"
             --targetImage "${{ image.targetImage }}"
             --acrName "${{ parameters.acrName }}"
 
