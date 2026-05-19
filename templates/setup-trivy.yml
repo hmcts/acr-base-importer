@@ -10,7 +10,7 @@
 parameters:
 - name: trivyVersion
   type: string
-  default: '0.68.1'
+  default: '0.70.0'
   displayName: 'Trivy Version'
 
 steps:
