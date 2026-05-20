@@ -28,13 +28,15 @@ parameters:
   displayName: 'Task Condition'
 
 steps:
-- task: Bash@3
+- task: AzureCLI@2
   displayName: 'Scanning: ${{ parameters.baseImage }}'
   name: ${{ parameters.taskName }}
   condition: ${{ parameters.condition }}
   inputs:
-    targetType: 'inline'
-    script: |
+    azureSubscription: ${{ parameters.serviceConnection }}
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
       set -e
 
       IMAGE_TO_SCAN="${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }}"
@@ -45,9 +47,7 @@ steps:
       # Login to ACR if scanning a private registry image on hmctsprod.azurecr.io
       if [[ "${{ parameters.baseRegistry }}" == hmctsprod.azurecr.io ]]; then
         echo "Logging into ACR: ${{ parameters.baseRegistry }}"
-        docker login "${{ parameters.baseRegistry }}" \
-          --username "$(registry-public-username)" \
-          --password "$(registry-public-password)"
+        az acr login --name hmctsprod
       fi
 
       # Scan image and save JSON

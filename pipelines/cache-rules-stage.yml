@@ -124,3 +124,4 @@ stages:
           trivyTimeout: ${{ parameters.trivyTimeout }}
           taskName: scan_dest_${{ replace(rule.ruleName, '-', '_') }}
           condition: eq(variables['check_dest_${{ replace(rule.ruleName, '-', '_') }}.imageExists'], 'true')
+          serviceConnection: ${{ parameters.serviceConnection }}

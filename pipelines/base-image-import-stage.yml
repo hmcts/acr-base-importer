@@ -76,6 +76,7 @@ stages:
           trivyTimeout: ${{ parameters.trivyTimeout }}
           taskName: scan_base_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
           condition: eq(variables['check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.newTagFound'], 'true')
+          serviceConnection: ${{ parameters.serviceConnection }}
 
       # Import and re-tag new image as latest (only if scan passed)
       - template: ../templates/import-image.yml
