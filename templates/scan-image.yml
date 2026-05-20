@@ -26,6 +26,10 @@ parameters:
   type: string
   default: 'true'
   displayName: 'Task Condition'
+- name: serviceConnection
+  type: string
+  default: ''
+  displayName: 'Azure Service Connection'
 
 steps:
 - task: AzureCLI@2
