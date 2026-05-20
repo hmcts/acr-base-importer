@@ -41,6 +41,14 @@ steps:
       SAFE_NAME="${{ parameters.taskName }}"
 
       echo "Scanning: $IMAGE_TO_SCAN"
+      
+      # Login to ACR if scanning a private registry image on hmctsprod.azurecr.io
+      if [[ "${{ parameters.baseRegistry }}" == hmctsprod.azurecr.io ]]; then
+        echo "Logging into ACR: ${{ parameters.baseRegistry }}"
+        docker login "${{ parameters.baseRegistry }}" \
+          --username "$(registry-public-username)" \
+          --password "$(registry-public-password)"
+      fi
 
       # Scan image and save JSON
       ./trivy image \
