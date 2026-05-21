@@ -242,7 +242,7 @@ rules:
     registry: registry.k8s.io
     destinationRepo: imported/k8s-sigs/external-dns
   ruby:
-    ruleName: ruby
+    ruleName: ruby-cache
     repoName: library/ruby
     registry: docker.io
     destinationRepo: imported/library/ruby
