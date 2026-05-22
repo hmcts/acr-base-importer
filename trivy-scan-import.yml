@@ -29,6 +29,10 @@ parameters:
     baseTag: 'debug'
     targetImage: 'imported/distroless/java25'
   - baseRegistry: 'gcr.io'
+    baseImage: 'distroless/base-debian13'
+    baseTag: 'latest'
+    targetImage: 'imported/distroless/base-debian13'
+  - baseRegistry: 'gcr.io'
     baseImage: 'distroless/java21-debian12'
     baseTag: 'latest'
     targetImage: 'imported/distroless/java21'
@@ -44,6 +48,10 @@ parameters:
     baseImage: 'distroless/java17-debian12'
     baseTag: 'debug'
     targetImage: 'imported/distroless/java17'
+  - baseRegistry: 'docker.io'
+    baseImage: 'jenkins/inbound-agent'
+    baseTag: 'trixie-jdk21'
+    targetImage: 'imported/jenkins/build-agent'
 variables:
 - name: acrName
   value: 'hmctsprod'

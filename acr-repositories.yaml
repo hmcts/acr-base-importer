@@ -242,3 +242,8 @@ rules:
     repoName: external-dns/external-dns
     registry: registry.k8s.io
     destinationRepo: imported/k8s-sigs/external-dns
+  jenkins-build-agent-jdk21:
+    ruleName: jenkins-build-agent-jdk21
+    repoName: jenkins/inbound-agent
+    registry: docker.io
+    destinationRepo: imported/jenkins/build-agent
