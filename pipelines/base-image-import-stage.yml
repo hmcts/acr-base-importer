@@ -16,7 +16,7 @@ parameters:
   default: 'hmctspublic'
 - name: trivyVersion
   type: string
-  default: '0.68.2'
+  default: '0.70.0'
 - name: severityThreshold
   type: string
   default: 'CRITICAL,HIGH'
