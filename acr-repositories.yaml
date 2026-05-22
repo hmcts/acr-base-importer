@@ -1,4 +1,5 @@
-# Please update README.md with each new unique repoName added to this file as it represents another supported upstream image repository
+# Please update README.md with each new unique repoName added to this file as it represents another supported
+# upstream image repository
 
 rules:
   postgres-exporter:
@@ -223,7 +224,7 @@ rules:
     destinationRepo: imported/citizensadvice/clamav-mock
   elastic-search:
     ruleName: elastic-search
-    repoName: elasticsearch
+    repoName: elastic/elasticsearch
     registry: docker.io
     destinationRepo: imported/elastic/elasticsearch
   logstash:
