@@ -267,6 +267,22 @@ parameters:
     baseRegistry: 'docker.io'
     baseImage: 'wiremock/wiremock'
     destinationRepo: 'imported/wiremock/wiremock'
+  - ruleName: 'logstash'
+    baseRegistry: 'docker.io'
+    baseImage: 'library/logstash'
+    destinationRepo: 'imported/elastic/logstash'
+  - ruleName: 'eclipse-temurin'
+    baseRegistry: 'docker.io'
+    baseImage: 'library/eclipse-temurin'
+    destinationRepo: 'imported/eclipse-temurin'
+  - ruleName: 'external-dns'
+    baseRegistry: 'registry.k8s.io'
+    baseImage: 'external-dns/external-dns'
+    destinationRepo: 'imported/k8s/external-dns'
+  - ruleName: 'ruby-cache'
+    baseRegistry: 'docker.io'
+    baseImage: 'library/ruby'
+    destinationRepo: 'imported/library/ruby'
 
 variables:
 - name: acrName
