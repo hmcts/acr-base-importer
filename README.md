@@ -1,8 +1,11 @@
 # ACR Base Image Importer
 
-Azure pipeline file: [base-image-import.yml](base-image-import.yml)
+Pipeline to automatically scan, import, and cache container images into the `hmctsprod` Azure Container Registry (ACR).
 
-Pipeline to automatically import updates to base images (java) or create caching rules for 3rd party images via [acr-cache.sh](acr-cache.sh).
+| Pipeline | Purpose |
+|----------|---------|
+| [`trivy-scan-import.yml`](trivy-scan-import.yml) | **Current** — Trivy security scanning + import + ACR cache rule management. Runs daily at 01:00 UTC. |
+| [`base-image-import.yml`](base-image-import.yml) | **Legacy** — Direct import without Trivy scanning. Kept for reference. |
 
 ## Supported Upstream Image Repositories
 
@@ -65,23 +68,11 @@ but will be added on the first running instance of `docker pull hmctsprod.azurec
 
 ### ACR Cache Rules
 
-The pipeline will also add ACR Cache Rules into `hmctsprod` registry.
+Cache rules are managed in [`acr-repositories.yaml`](acr-repositories.yaml) and applied automatically by Stage 2 of [`trivy-scan-import.yml`](trivy-scan-import.yml). See the [Stage 2 section below](#stage-2--create-and-validate-acr-cache-rules) for instructions on adding a new rule.
 
-To create a new ACR cache rule on a repository you need to amend the following file.
+# Scan and Import Pipeline (`trivy-scan-import.yml`)
 
-[acr-repositories.yaml](acr-repositories.yaml)
-<br>You need to add the following block of code, replacing the values of the parameters with the one you need creating. The below is just an example of an existing ACR Cache rule
-
-```yaml
-  jenkins: # this can be the same as the name of the repository
-    ruleName: Jenkins # the name of the cache rule.  Must be more than 4 characters in length.
-    repoName: hmcts/jenkins # the name of the repository the image is currently stored in. Should always be format of publisher/image. If there is no publisher, please use "library".
-    destinationRepo: jenkins # destination repository as it appears in the ACR Cache, will not be visibile until first instance of docker pull command
-```
-
-# Scan and Import base images with Trivy
-
-The [pipeline](trivy-scan-import.yml) automatically scan, import, and cache container images into HMCTS ACR(s). The pipeline runs in two stages. 
+The [trivy-scan-import.yml](trivy-scan-import.yml) pipeline runs two stages in sequence.
 
 ## Stage 1 — Scan and Import Base Images
 
@@ -89,38 +80,48 @@ For each image in `baseImagestoImport`:
 
 1. **Check version** — compares the source registry digest against the current digest in ACR. Skips the remaining steps if the image is already up to date.
 2. **Scan with Trivy** — scans the source image for `CRITICAL` and `HIGH` vulnerabilities. Only runs if a new version was found.
-3. **Import to ACR** — imports the image and re-tags it. Only runs if the Trivy scan passed (no critical vulnerabilities).
+3. **Import to ACR** — imports the image with a digest-tagged version, then re-tags it with the base tag. Only runs if the Trivy scan passed (no critical vulnerabilities).
 
 Currently imported base images:
 
-| Source Registry | Source Image | ACR Repository |
-|-----------------|--------------|----------------|
-| `gcr.io` | `distroless/java25-debian13:latest` | `hmctsprod.azurecr.io/imported/distroless/java25` |
-| `gcr.io` | `distroless/java25-debian13:debug` | `hmctsprod.azurecr.io/imported/distroless/java25` |
-| `gcr.io` | `distroless/java21-debian12:latest` | `hmctsprod.azurecr.io/imported/distroless/java21` |
-| `gcr.io` | `distroless/java21-debian12:debug` | `hmctsprod.azurecr.io/imported/distroless/java21` |
-| `gcr.io` | `distroless/java17-debian12:latest` | `hmctsprod.azurecr.io/imported/distroless/java17` |
-| `gcr.io` | `distroless/java17-debian12:debug` | `hmctsprod.azurecr.io/imported/distroless/java17` |
+| Source Registry | Source Image | Tag | ACR Repository |
+|-----------------|--------------|-----|----------------|
+| `gcr.io` | `distroless/java25-debian13` | `latest` | `hmctsprod.azurecr.io/imported/distroless/java25` |
+| `gcr.io` | `distroless/java25-debian13` | `debug` | `hmctsprod.azurecr.io/imported/distroless/java25` |
+| `gcr.io` | `distroless/base-debian13` | `latest` | `hmctsprod.azurecr.io/imported/distroless/base-debian13` |
+| `gcr.io` | `distroless/java21-debian12` | `latest` | `hmctsprod.azurecr.io/imported/distroless/java21` |
+| `gcr.io` | `distroless/java21-debian12` | `debug` | `hmctsprod.azurecr.io/imported/distroless/java21` |
+| `gcr.io` | `distroless/java17-debian12` | `latest` | `hmctsprod.azurecr.io/imported/distroless/java17` |
+| `gcr.io` | `distroless/java17-debian12` | `debug` | `hmctsprod.azurecr.io/imported/distroless/java17` |
+| `docker.io` | `jenkins/inbound-agent` | `trixie-jdk21` | `hmctsprod.azurecr.io/imported/jenkins/build-agent` |
+
+To add a new base image, add an entry to `baseImagestoImport` in [`trivy-scan-import.yml`](trivy-scan-import.yml):
+
+```yaml
+- baseRegistry: 'gcr.io'
+  baseImage: 'distroless/java25-debian13'
+  baseTag: 'latest'
+  targetImage: 'imported/distroless/java25'
+```
 
 ## Stage 2 — Create and Validate ACR Cache Rules
 
-For each rule in `cacheRulesToValidate`:
+Rules are read at runtime from [`acr-repositories.yaml`](acr-repositories.yaml) — this is the **single source of truth** for cache rules.
+
+For each rule:
 
 1. **Create cache rule** — creates the ACR cache rule if it does not already exist, mapping the upstream registry/image to a destination repository in `hmctsprod`.
 2. **Check if cached image exists** — looks up the destination repository in ACR to find a tag to scan (`latest` preferred, otherwise most recent non-signature tag).
 3. **Scan with Trivy** — scans the cached image already in ACR for `CRITICAL` and `HIGH` vulnerabilities. Only runs if the image exists in ACR.
 
-ACR cache rules work by transparently proxying `docker pull hmctsprod.azurecr.io/<destinationRepo>:<tag>` to the upstream registry. Tags are only populated in ACR on the first pull.
+ACR cache rules transparently proxy `docker pull hmctsprod.azurecr.io/<destinationRepo>:<tag>` to the upstream registry. Tags are only populated in ACR on the first pull.
 
-If you want to add a new container image to be scanned and imported, you need to amend the following file.
-
-[trivy-scan-import.yml](trivy-scan-import.yml)
-
-<br>You need to add the following block of code under the parameter `parameters.cacheRulesToValidate.default`.
+To add a new cache rule, add an entry to [`acr-repositories.yaml`](acr-repositories.yaml):
 
 ```yaml
-      ruleName: 'postgresql'
-      baseRegistry: 'docker.io'
-      baseImage: 'bitnami/postgresql'
-      destinationRepo: 'imported/bitnami/postgresql'
+  my-image:
+    ruleName: my-image          # unique rule name, minimum 5 characters
+    repoName: myorg/my-image    # image path in the source registry (use library/<name> for official Docker Hub images)
+    registry: docker.io         # source registry (e.g. docker.io, ghcr.io, mcr.microsoft.com, registry.k8s.io)
+    destinationRepo: imported/myorg/my-image  # repository path in hmctsprod ACR
 ```
