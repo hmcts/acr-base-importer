@@ -75,10 +75,6 @@ parameters:
     baseRegistry: 'docker.io'
     baseImage: 'elasticsearch/elasticsearch'
     destinationRepo: 'imported/elastic/elasticsearch'
-  - ruleName: 'external-dns'
-    baseRegistry: 'docker.io'
-    baseImage: 'bitnami/external-dns'
-    destinationRepo: 'imported/bitnami/external-dns'
   - ruleName: 'kubectl'
     baseRegistry: 'docker.io'
     baseImage: 'bitnami/kubectl'
@@ -279,10 +275,6 @@ parameters:
     baseRegistry: 'registry.k8s.io'
     baseImage: 'external-dns/external-dns'
     destinationRepo: 'imported/k8s/external-dns'
-  - ruleName: 'ruby-cache'
-    baseRegistry: 'docker.io'
-    baseImage: 'library/ruby'
-    destinationRepo: 'imported/library/ruby'
 
 variables:
 - name: acrName
