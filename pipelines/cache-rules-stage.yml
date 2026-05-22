@@ -66,18 +66,18 @@ stages:
             if [ "$rule_found" != "null" ]; then
               echo "✓ Cache rule ${{ rule.ruleName }} already exists - skipping creation"
             else
-              echo "Cache rule ${{ rule.ruleName }} does not exist - will attempt to create"
-              echo "Creating cache rule: ${{ rule.ruleName }}"
-              echo "  Source: ${{ rule.baseRegistry }}/${{ rule.baseImage }}"
-              echo "  Destination: ${{ rule.destinationRepo }}"
-            
-              az acr cache create \
-                    -r ${{ parameters.acrName }} \
-                    -n "${{ rule.ruleName }}" \
-                    -s "${{ rule.baseRegistry }}/${{ rule.baseImage }}" \
-                    -t "${{ rule.destinationRepo }}"
-            
-              echo "✓ Created cache rule: ${{ rule.ruleName }}"
+              echo "Cache rule ${{ rule.ruleName }} does not exist - create it separately "
+#              echo "Creating cache rule: ${{ rule.ruleName }}"
+#              echo "  Source: ${{ rule.baseRegistry }}/${{ rule.baseImage }}"
+#              echo "  Destination: ${{ rule.destinationRepo }}"
+#
+#              az acr cache create \
+#                    -r ${{ parameters.acrName }} \
+#                    -n "${{ rule.ruleName }}" \
+#                    -s "${{ rule.baseRegistry }}/${{ rule.baseImage }}" \
+#                    -t "${{ rule.destinationRepo }}"
+#
+#              echo "✓ Created cache rule: ${{ rule.ruleName }}"
             fi
 
       # Check if destination images exist in ACR
