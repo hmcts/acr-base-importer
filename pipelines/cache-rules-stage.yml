@@ -62,11 +62,13 @@ stages:
                 ARTIFACT_DIR="$(Build.ArtifactStagingDirectory)/trivy-scan-results"
                 FINDINGS_FILE="$ARTIFACT_DIR/high-critical-findings.txt"
                 SUMMARY_FILE="$ARTIFACT_DIR/high-critical-summary.md"
+                SUMMARY_TSV="$ARTIFACT_DIR/high-critical-summary.tsv"
 
                 mkdir -p "$ARTIFACT_DIR"
                 : > "$FINDINGS_FILE"
                 echo "| Rule | Image | Critical | High |" > "$SUMMARY_FILE"
                 echo "| --- | --- | ---: | ---: |" >> "$SUMMARY_FILE"
+                printf "Rule\tImage\tCritical\tHigh\n" > "$SUMMARY_TSV"
 
                 # Login to ACR once so Trivy can pull images for scanning
                 az acr login --name "$ACR_NAME"
@@ -169,6 +171,7 @@ stages:
                     } >> "$FINDINGS_FILE"
 
                     echo "| $RULE_NAME | $IMAGE_TO_SCAN | $CRITICAL_COUNT | $HIGH_COUNT |" >> "$SUMMARY_FILE"
+                    printf "%s\t%s\t%s\t%s\n" "$RULE_NAME" "$IMAGE_TO_SCAN" "$CRITICAL_COUNT" "$HIGH_COUNT" >> "$SUMMARY_TSV"
                   fi
 
                   if [ "$CRITICAL_COUNT" -gt 0 ]; then
@@ -189,20 +192,38 @@ stages:
                 # Keep summary file usable when no rows were added.
                 if [ "$(wc -l < "$SUMMARY_FILE")" -eq 2 ]; then
                   echo "| none | none | 0 | 0 |" >> "$SUMMARY_FILE"
+                  printf "none\tnone\t0\t0\n" >> "$SUMMARY_TSV"
                 fi
 
                 echo "Summary captured in $SUMMARY_FILE"
 
           - task: Bash@3
-            displayName: 'Print HIGH/CRITICAL summary table'
+            displayName: 'Print compact HIGH/CRITICAL summary'
             inputs:
               targetType: inline
               script: |
                 set -euo pipefail
-                SUMMARY_FILE="$(Build.ArtifactStagingDirectory)/trivy-scan-results/high-critical-summary.md"
+                SUMMARY_TSV="$(Build.ArtifactStagingDirectory)/trivy-scan-results/high-critical-summary.tsv"
 
                 echo "===== HIGH/CRITICAL Summary Table ====="
-                cat "$SUMMARY_FILE"
+                awk -F '\t' '
+                  BEGIN {
+                    rule_w = 28
+                    image_w = 78
+                  }
+                  NR == 1 {
+                    printf "%-*s %-*s %8s %8s\n", rule_w, $1, image_w, $2, $3, $4
+                    printf "%-*s %-*s %8s %8s\n", rule_w, "----------------------------", image_w, "------------------------------------------------------------------------------", "--------", "--------"
+                    next
+                  }
+                  {
+                    image = $2
+                    if (length(image) > image_w) {
+                      image = substr(image, 1, image_w - 3) "..."
+                    }
+                    printf "%-*s %-*s %8s %8s\n", rule_w, $1, image_w, image, $3, $4
+                  }
+                ' "$SUMMARY_TSV"
 
           - task: Bash@3
             displayName: 'Print consolidated HIGH/CRITICAL findings'
