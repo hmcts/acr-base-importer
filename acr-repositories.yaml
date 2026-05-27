@@ -247,3 +247,8 @@ rules:
     repoName: jenkins/inbound-agent
     registry: docker.io
     destinationRepo: imported/jenkins/build-agent
+  ruby:
+    ruleName: ruby-cache
+    repoName: library/ruby
+    registry: docker.io
+    destinationRepo: imported/library/ruby
