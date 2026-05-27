@@ -61,9 +61,12 @@ stages:
                 YAML_FILE="$(System.DefaultWorkingDirectory)/acr-repositories.yaml"
                 ARTIFACT_DIR="$(Build.ArtifactStagingDirectory)/trivy-scan-results"
                 FINDINGS_FILE="$ARTIFACT_DIR/high-critical-findings.txt"
+                SUMMARY_FILE="$ARTIFACT_DIR/high-critical-summary.md"
 
                 mkdir -p "$ARTIFACT_DIR"
                 : > "$FINDINGS_FILE"
+                echo "| Rule | Image | Critical | High |" > "$SUMMARY_FILE"
+                echo "| --- | --- | ---: | ---: |" >> "$SUMMARY_FILE"
 
                 # Login to ACR once so Trivy can pull images for scanning
                 az acr login --name "$ACR_NAME"
@@ -164,6 +167,8 @@ stages:
                       cat "trivy-scan-${SAFE_NAME}.txt" || echo "Unable to display report"
                       echo ""
                     } >> "$FINDINGS_FILE"
+
+                    echo "| $RULE_NAME | $IMAGE_TO_SCAN | $CRITICAL_COUNT | $HIGH_COUNT |" >> "$SUMMARY_FILE"
                   fi
 
                   if [ "$CRITICAL_COUNT" -gt 0 ]; then
@@ -180,6 +185,24 @@ stages:
                   echo "No HIGH/CRITICAL findings detected." > "$FINDINGS_FILE"
                   echo "No HIGH/CRITICAL findings detected."
                 fi
+
+                # Keep summary file usable when no rows were added.
+                if [ "$(wc -l < "$SUMMARY_FILE")" -eq 2 ]; then
+                  echo "| none | none | 0 | 0 |" >> "$SUMMARY_FILE"
+                fi
+
+                echo "Summary captured in $SUMMARY_FILE"
+
+          - task: Bash@3
+            displayName: 'Print HIGH/CRITICAL summary table'
+            inputs:
+              targetType: inline
+              script: |
+                set -euo pipefail
+                SUMMARY_FILE="$(Build.ArtifactStagingDirectory)/trivy-scan-results/high-critical-summary.md"
+
+                echo "===== HIGH/CRITICAL Summary Table ====="
+                cat "$SUMMARY_FILE"
 
           - task: Bash@3
             displayName: 'Print consolidated HIGH/CRITICAL findings'
