@@ -89,7 +89,7 @@ jobs:
       inputs:
         azureSubscription: $(serviceConnection)
         scriptLocation: 'scriptPath'
-        scriptPath: check-base-tag.sh
+        scriptPath: scripts/check-base-tag.sh
         arguments: |
           --sourceImage "$(baseImage)" --sourceRegistry "$(baseRegistry)" --tag "$(baseTag)" --targetImage "$(targetImage)" --acrName "$(acrName)"
 
@@ -109,7 +109,7 @@ jobs:
       inputs:
         azureSubscription: $(serviceConnection)
         scriptLocation: 'scriptPath'
-        scriptPath: tag-new-image.sh
+        scriptPath: scripts/tag-new-image.sh
         arguments: |
           --tag "$(baseTag)" --targetImage "$(targetImage)" --acrName "$(acrName)" --targetRegistry "$(targetRegistry)" --sourceDigest "$(baseDigest)" --acrDigest "$(acrDigest)"
 
