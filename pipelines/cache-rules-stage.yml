@@ -1,0 +1,254 @@
+## Stage: Create ACR Cache Rules
+## Called by: trivy-scan-import.yml
+## Rules are read at runtime from acr-repositories.yaml (single source of truth)
+##
+parameters:
+  - name: serviceConnection
+    type: string
+    default: 'DCD-CNP-PROD'
+  - name: keyvaultName
+    type: string
+    default: 'infra-vault-prod'
+  - name: acrName
+    type: string
+    default: 'hmctspublic'
+  - name: trivyVersion
+    type: string
+    default: '0.70.0'
+  - name: severityThreshold
+    type: string
+    default: 'CRITICAL,HIGH'
+  - name: trivyTimeout
+    type: string
+    default: '10m'
+
+stages:
+  - stage: CreateCache
+    displayName: 'Create ACR Cache Rules'
+    jobs:
+      - job: ValidateAndCreateCacheRules
+        displayName: 'Scan Cache Rules and Create Rules'
+        timeoutInMinutes: 180  # 3 hours - scanning multiple repos takes time
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          # Get ACR credentials from Key Vault
+          - task: AzureKeyVault@2
+            displayName: 'Get ACR credentials from Key Vault'
+            inputs:
+              azureSubscription: ${{ parameters.serviceConnection }}
+              keyVaultName: ${{ parameters.keyvaultName }}
+              secretsFilter: 'registry-public-username,registry-public-password'
+
+          # Setup Trivy once for all cache rule scanning
+          - template: ../templates/setup-trivy.yml
+            parameters:
+              trivyVersion: ${{ parameters.trivyVersion }}
+
+          # Process all cache rules from acr-repositories.yaml
+          - task: AzureCLI@2
+            displayName: 'Process all cache rules from acr-repositories.yaml'
+            inputs:
+              azureSubscription: ${{ parameters.serviceConnection }}
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -uo pipefail  # note: intentionally no -e, errors are handled per rule
+
+                ACR_NAME="${{ parameters.acrName }}"
+                SEVERITY="${{ parameters.severityThreshold }}"
+                TIMEOUT="${{ parameters.trivyTimeout }}"
+                YAML_FILE="$(System.DefaultWorkingDirectory)/acr-repositories.yaml"
+                ARTIFACT_DIR="$(Build.ArtifactStagingDirectory)/trivy-scan-results"
+                FINDINGS_FILE="$ARTIFACT_DIR/high-critical-findings.txt"
+                SUMMARY_FILE="$ARTIFACT_DIR/high-critical-summary.md"
+                SUMMARY_TSV="$ARTIFACT_DIR/high-critical-summary.tsv"
+
+                mkdir -p "$ARTIFACT_DIR"
+                : > "$FINDINGS_FILE"
+                echo "| Rule | Image | Critical | High |" > "$SUMMARY_FILE"
+                echo "| --- | --- | ---: | ---: |" >> "$SUMMARY_FILE"
+                printf "Rule\tImage\tCritical\tHigh\n" > "$SUMMARY_TSV"
+
+                # Login to ACR once so Trivy can pull images for scanning
+                az acr login --name "$ACR_NAME"
+
+                # Parse acr-repositories.yaml into JSON using Python3 (pre-installed on ubuntu-latest)
+                RULES_JSON=$(python3 -c "
+                import yaml, json, sys
+                data = yaml.safe_load(open('$YAML_FILE'))
+                print(json.dumps(data['rules']))
+                ")
+
+                RULE_KEYS=$(echo "$RULES_JSON" | jq -r 'keys[]')
+
+                while IFS= read -r key; do
+                  RULE_NAME=$(echo "$RULES_JSON" | jq -r --arg k "$key" '.[$k].ruleName')
+                  REPO_NAME=$(echo "$RULES_JSON" | jq -r --arg k "$key" '.[$k].repoName')
+                  REGISTRY=$(echo  "$RULES_JSON" | jq -r --arg k "$key" '.[$k].registry')
+                  DEST_REPO=$(echo "$RULES_JSON" | jq -r --arg k "$key" '.[$k].destinationRepo')
+
+                  echo ""
+                  echo "=========================================="
+                  echo "Processing: $RULE_NAME"
+                  echo "  Source:      $REGISTRY/$REPO_NAME"
+                  echo "  Destination: $ACR_NAME.azurecr.io/$DEST_REPO"
+                  echo "=========================================="
+
+                  # --- Step 1: Create cache rule if it does not exist ---
+                  rule_found=$(az acr cache show --registry "$ACR_NAME" --name "$RULE_NAME" --query "name" -o tsv 2>/dev/null || echo "")
+                  if [ -n "$rule_found" ]; then
+                    echo "✓ Cache rule '$RULE_NAME' already exists - skipping creation"
+                  else
+                    echo "Creating cache rule '$RULE_NAME' ..."
+                
+                    case "$REGISTRY" in
+                      docker.io|mcr.microsoft.com)
+                        CRED_FLAG="-c dockerhub"
+                        ;;
+                      *)
+                        CRED_FLAG=""
+                        ;;
+                    esac
+                
+                    if az acr cache create -r "$ACR_NAME" -n "$RULE_NAME" -s "$REGISTRY/$REPO_NAME" -t "$DEST_REPO" $CRED_FLAG 2>&1; then
+                      echo "✓ Created cache rule: $RULE_NAME"
+                    else
+                      echo "##vso[task.logissue type=warning]Could not create cache rule '$RULE_NAME' - skipping"
+                      continue
+                    fi
+                  fi
+
+                  # --- Step 2: Find a tag to scan ---
+                  TAGS_JSON=$(az acr repository show-tags -n "$ACR_NAME" --repository "$DEST_REPO" -o json 2>/dev/null || echo "[]")
+
+                  if [ -z "$TAGS_JSON" ] || [ "$TAGS_JSON" == "[]" ]; then
+                    echo "##vso[task.logissue type=warning]No tags found for $DEST_REPO (repo may not exist yet) - skipping scan"
+                    continue
+                  fi
+
+                  if echo "$TAGS_JSON" | jq -e '.[] | select(. == "latest")' >/dev/null 2>&1; then
+                    TAG_TO_SCAN="latest"
+                  else
+                    # Exclude cosign signature tags (sha256-*.sig) before picking the most recent
+                    TAG_TO_SCAN=$(az acr repository show-tags -n "$ACR_NAME" --repository "$DEST_REPO" --orderby time_desc --output tsv | grep -v '\.sig$' | head -n 1)
+                  fi
+
+                  if [ -z "$TAG_TO_SCAN" ] || [ "$TAG_TO_SCAN" == "null" ]; then
+                    echo "##vso[task.logissue type=warning]Could not determine a tag for $DEST_REPO - skipping scan"
+                    continue
+                  fi
+
+                  # --- Step 3: Scan with Trivy ---
+                  IMAGE_TO_SCAN="$ACR_NAME.azurecr.io/$DEST_REPO:$TAG_TO_SCAN"
+                  SAFE_NAME=$(echo "$RULE_NAME" | tr '-' '_')
+
+                  echo "Scanning: $IMAGE_TO_SCAN"
+
+                  if ! ./trivy image \
+                    --severity "$SEVERITY" \
+                    --format json \
+                    --timeout "$TIMEOUT" \
+                    --ignore-unfixed \
+                    --scanners vuln \
+                    --output "trivy-report-${SAFE_NAME}.json" \
+                    "$IMAGE_TO_SCAN"; then
+                    echo "##vso[task.logissue type=warning]Trivy scan failed for $IMAGE_TO_SCAN - skipping"
+                    continue
+                  fi
+
+                  CRITICAL_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "trivy-report-${SAFE_NAME}.json")
+                  HIGH_COUNT=$(jq    '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")]     | length' "trivy-report-${SAFE_NAME}.json")
+
+                  ./trivy convert --format table --output "trivy-scan-${SAFE_NAME}.txt" "trivy-report-${SAFE_NAME}.json" || true
+
+                  echo ""
+                  echo "--- Scan Report: $RULE_NAME ---"
+                  cat "trivy-scan-${SAFE_NAME}.txt" || echo "Unable to display report"
+                  echo "Vulnerabilities found: Critical=$CRITICAL_COUNT, High=$HIGH_COUNT"
+
+                  if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 0 ]; then
+                    {
+                      echo "=========================================="
+                      echo "Rule: $RULE_NAME"
+                      echo "Image: $IMAGE_TO_SCAN"
+                      echo "Critical: $CRITICAL_COUNT"
+                      echo "High: $HIGH_COUNT"
+                      echo ""
+                      echo "Scan output:"
+                      cat "trivy-scan-${SAFE_NAME}.txt" || echo "Unable to display report"
+                      echo ""
+                    } >> "$FINDINGS_FILE"
+
+                    echo "| $RULE_NAME | $IMAGE_TO_SCAN | $CRITICAL_COUNT | $HIGH_COUNT |" >> "$SUMMARY_FILE"
+                    printf "%s\t%s\t%s\t%s\n" "$RULE_NAME" "$IMAGE_TO_SCAN" "$CRITICAL_COUNT" "$HIGH_COUNT" >> "$SUMMARY_TSV"
+                  fi
+
+                  if [ "$CRITICAL_COUNT" -gt 0 ]; then
+                    echo "##vso[task.logissue type=warning][$RULE_NAME] $CRITICAL_COUNT critical vulnerabilities found in $IMAGE_TO_SCAN"
+                  else
+                    echo "✓ Scan passed for $RULE_NAME - no critical vulnerabilities"
+                  fi
+
+                done <<< "$RULE_KEYS"
+
+                if [ -s "$FINDINGS_FILE" ]; then
+                  echo "Findings captured in $FINDINGS_FILE"
+                else
+                  echo "No HIGH/CRITICAL findings detected." > "$FINDINGS_FILE"
+                  echo "No HIGH/CRITICAL findings detected."
+                fi
+
+                # Keep summary file usable when no rows were added.
+                if [ "$(wc -l < "$SUMMARY_FILE")" -eq 2 ]; then
+                  echo "| none | none | 0 | 0 |" >> "$SUMMARY_FILE"
+                  printf "none\tnone\t0\t0\n" >> "$SUMMARY_TSV"
+                fi
+
+                echo "Summary captured in $SUMMARY_FILE"
+
+          - task: Bash@3
+            displayName: 'Print compact HIGH/CRITICAL summary'
+            inputs:
+              targetType: inline
+              script: |
+                set -euo pipefail
+                SUMMARY_TSV="$(Build.ArtifactStagingDirectory)/trivy-scan-results/high-critical-summary.tsv"
+
+                echo "===== HIGH/CRITICAL Summary Table ====="
+                awk -F '\t' '
+                  BEGIN {
+                    rule_w = 28
+                    image_w = 78
+                  }
+                  NR == 1 {
+                    printf "%-*s %-*s %8s %8s\n", rule_w, $1, image_w, $2, $3, $4
+                    printf "%-*s %-*s %8s %8s\n", rule_w, "----------------------------", image_w, "------------------------------------------------------------------------------", "--------", "--------"
+                    next
+                  }
+                  {
+                    image = $2
+                    if (length(image) > image_w) {
+                      image = substr(image, 1, image_w - 3) "..."
+                    }
+                    printf "%-*s %-*s %8s %8s\n", rule_w, $1, image_w, image, $3, $4
+                  }
+                ' "$SUMMARY_TSV"
+
+          - task: Bash@3
+            displayName: 'Print consolidated HIGH/CRITICAL findings'
+            inputs:
+              targetType: inline
+              script: |
+                set -euo pipefail
+                FINDINGS_FILE="$(Build.ArtifactStagingDirectory)/trivy-scan-results/high-critical-findings.txt"
+
+                echo "===== Consolidated HIGH/CRITICAL Trivy Findings ====="
+                cat "$FINDINGS_FILE"
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Trivy findings artifact'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)/trivy-scan-results'
+              ArtifactName: 'trivy-scan-results'
+              publishLocation: 'Container'

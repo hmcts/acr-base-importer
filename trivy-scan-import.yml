@@ -1,0 +1,89 @@
+## Main Orchestration Pipeline
+## Scan and import container images using Trivy
+## This pipeline coordinates base image imports and ACR cache rule creation
+## Cache rules are defined in acr-repositories.yaml (single source of truth)
+##
+name: Trivy Scan and ACR Import
+trigger:
+  - master
+pr: none
+
+schedules:
+  - cron: '0 1 * * *'
+    displayName: Daily vulnerability scan and import
+    branches:
+      include:
+      - master
+    always: 'true'
+
+parameters:
+- name: baseImagestoImport
+  type: object
+  displayName: 'Images to scan and import'
+  default:
+    - baseRegistry: 'gcr.io'
+      baseImage: 'distroless/java25-debian13'
+      baseTag: 'latest'
+      targetImage: 'imported/distroless/java25'
+    - baseRegistry: 'gcr.io'
+      baseImage: 'distroless/java25-debian13'
+      baseTag: 'debug'
+      targetImage: 'imported/distroless/java25'
+    - baseRegistry: 'gcr.io'
+      baseImage: 'distroless/base-debian13'
+      baseTag: 'latest'
+      targetImage: 'imported/distroless/base-debian13'
+    - baseRegistry: 'gcr.io'
+      baseImage: 'distroless/java21-debian12'
+      baseTag: 'latest'
+      targetImage: 'imported/distroless/java21'
+    - baseRegistry: 'gcr.io'
+      baseImage: 'distroless/java21-debian12'
+      baseTag: 'debug'
+      targetImage: 'imported/distroless/java21'
+    - baseRegistry: 'gcr.io'
+      baseImage: 'distroless/java17-debian12'
+      baseTag: 'latest'
+      targetImage: 'imported/distroless/java17'
+    - baseRegistry: 'gcr.io'
+      baseImage: 'distroless/java17-debian12'
+      baseTag: 'debug'
+      targetImage: 'imported/distroless/java17'
+
+variables:
+  - name: acrName
+    value: 'hmctsprod'
+  - name: targetRegistry
+    value: 'hmctsprod.azurecr.io'
+  - name: keyvaultName
+    value: 'infra-vault-prod'
+  - name: serviceConnection
+    value: 'DCD-CNP-PROD'
+  - name: trivyVersion
+    value: '0.70.0'
+  - name: severityThreshold
+    value: 'CRITICAL,HIGH'
+  - name: trivyTimeout
+    value: '10m'
+
+stages:
+  # Stage 1: Import base images
+  - template: pipelines/base-image-import-stage.yml
+    parameters:
+      baseImagestoImport: ${{ parameters.baseImagestoImport }}
+      serviceConnection: $(serviceConnection)
+      keyvaultName: $(keyvaultName)
+      acrName: $(acrName)
+      trivyVersion: $(trivyVersion)
+      severityThreshold: $(severityThreshold)
+      trivyTimeout: $(trivyTimeout)
+
+  # Stage 2: Create and validate cache rules (rules read from acr-repositories.yaml at runtime)
+  - template: pipelines/cache-rules-stage.yml
+    parameters:
+      serviceConnection: $(serviceConnection)
+      keyvaultName: $(keyvaultName)
+      acrName: $(acrName)
+      trivyVersion: $(trivyVersion)
+      severityThreshold: $(severityThreshold)
+      trivyTimeout: $(trivyTimeout)
