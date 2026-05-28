@@ -49,10 +49,6 @@ parameters:
       baseImage: 'distroless/java17-debian12'
       baseTag: 'debug'
       targetImage: 'imported/distroless/java17'
-    - baseRegistry: 'docker.io'
-      baseImage: 'jenkins/inbound-agent'
-      baseTag: 'trixie-jdk21'
-      targetImage: 'imported/jenkins/build-agent'
 
 variables:
   - name: acrName
