@@ -101,7 +101,17 @@ stages:
                     echo "✓ Cache rule '$RULE_NAME' already exists - skipping creation"
                   else
                     echo "Creating cache rule '$RULE_NAME' ..."
-                    if az acr cache create -r "$ACR_NAME" -n "$RULE_NAME" -s "$REGISTRY/$REPO_NAME" -t "$DEST_REPO" 2>&1; then
+                
+                    case "$REGISTRY" in
+                      docker.io|mcr.microsoft.com)
+                        CRED_FLAG="-c dockerhub"
+                        ;;
+                      *)
+                        CRED_FLAG=""
+                        ;;
+                    esac
+                
+                    if az acr cache create -r "$ACR_NAME" -n "$RULE_NAME" -s "$REGISTRY/$REPO_NAME" -t "$DEST_REPO" $CRED_FLAG 2>&1; then
                       echo "✓ Created cache rule: $RULE_NAME"
                     else
                       echo "##vso[task.logissue type=warning]Could not create cache rule '$RULE_NAME' - skipping"
