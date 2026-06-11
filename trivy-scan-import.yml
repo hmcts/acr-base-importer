@@ -49,6 +49,10 @@ parameters:
       baseImage: 'distroless/java17-debian12'
       baseTag: 'debug'
       targetImage: 'imported/distroless/java17'
+    - baseRegistry: 'gcr.io'
+      baseImage: 'distroless/python3-debian13'
+      baseTag: 'latest'
+      targetImage: 'imported/distroless/python3'
 
 variables:
   - name: acrName
