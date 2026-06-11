@@ -93,6 +93,7 @@ Currently imported base images:
 | `gcr.io` | `distroless/java21-debian12` | `debug` | `hmctsprod.azurecr.io/imported/distroless/java21` |
 | `gcr.io` | `distroless/java17-debian12` | `latest` | `hmctsprod.azurecr.io/imported/distroless/java17` |
 | `gcr.io` | `distroless/java17-debian12` | `debug` | `hmctsprod.azurecr.io/imported/distroless/java17` |
+| `gcr.io` | `distroless/python3-debian13` | `latest` | `hmctsprod.azurecr.io/imported/distroless/python3` |
 | `docker.io` | `jenkins/inbound-agent` | `trixie-jdk21` | `hmctsprod.azurecr.io/imported/jenkins/build-agent` |
 
 To add a new base image, add an entry to `baseImagestoImport` in [`trivy-scan-import.yml`](trivy-scan-import.yml):
