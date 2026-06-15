@@ -1,6 +1,6 @@
 # ACR Base Image Importer
 
-Pipeline to automatically scan, import, and cache container images into HMCTS Azure Container Registries (ACR). Base images are imported into both `hmctsprod` and `hmctssbox`; cache rules are managed in `hmctsprod` only.
+Pipeline to automatically scan, import, and cache container images into HMCTS Azure Container Registries (ACR). By default it targets `hmctsprod` (base image import + cache rules). Importing the same base images into `hmctssbox` is opt-in via the `importToSbox` parameter on a manual run; cache rules are managed in `hmctsprod` only.
 
 | Pipeline | Purpose |
 |----------|---------|
@@ -72,11 +72,18 @@ Cache rules are managed in [`acr-repositories.yaml`](acr-repositories.yaml) and 
 
 # Scan and Import Pipeline (`trivy-scan-import.yml`)
 
-The [trivy-scan-import.yml](trivy-scan-import.yml) pipeline runs three stages:
+The [trivy-scan-import.yml](trivy-scan-import.yml) pipeline has two runtime parameters that select which registries to target:
 
-1. **Scan and Import Base Images** (prod) — imports `baseImagestoImport` into `hmctsprod`.
-2. **Create and Validate ACR Cache Rules** — runs after Stage 1, against `hmctsprod` only.
-3. **Scan and Import Base Images** (sbox) — imports the same `baseImagestoImport` set into `hmctssbox`. This stage is independent (`dependsOn: []`), so a sbox failure never blocks the prod import or cache-rule stages.
+| Parameter | Default | Effect |
+|-----------|---------|--------|
+| `importToProd` | `true` | Runs the prod stages (base image import + cache rules) against `hmctsprod`. |
+| `importToSbox` | `false` | Runs the sbox stage (base image import) against `hmctssbox`. Opt-in. |
+
+The daily schedule and merges to `master` use the defaults, so **automated runs target `hmctsprod` only**. To import into `hmctssbox`, start a manual run and tick `importToSbox` (you can untick `importToProd` to import into sbox only). The stages produced:
+
+1. **Scan and Import Base Images** (prod) — imports `baseImagestoImport` into `hmctsprod`. Only when `importToProd` is `true`.
+2. **Create and Validate ACR Cache Rules** — runs after Stage 1, against `hmctsprod` only. Only when `importToProd` is `true`.
+3. **Scan and Import Base Images** (sbox) — imports the same `baseImagestoImport` set into `hmctssbox`. Only when `importToSbox` is `true`. Independent (`dependsOn: []`), so a sbox failure never blocks the prod stages.
 
 ## Stage 1 / Stage 3 — Scan and Import Base Images
 
