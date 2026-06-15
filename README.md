@@ -1,6 +1,6 @@
 # ACR Base Image Importer
 
-Pipeline to automatically scan, import, and cache container images into the `hmctsprod` Azure Container Registry (ACR).
+Pipeline to automatically scan, import, and cache container images into HMCTS Azure Container Registries (ACR). Base images are imported into both `hmctsprod` and `hmctssbox`; cache rules are managed in `hmctsprod` only.
 
 | Pipeline | Purpose |
 |----------|---------|
@@ -72,17 +72,21 @@ Cache rules are managed in [`acr-repositories.yaml`](acr-repositories.yaml) and 
 
 # Scan and Import Pipeline (`trivy-scan-import.yml`)
 
-The [trivy-scan-import.yml](trivy-scan-import.yml) pipeline runs two stages in sequence.
+The [trivy-scan-import.yml](trivy-scan-import.yml) pipeline runs three stages:
 
-## Stage 1 — Scan and Import Base Images
+1. **Scan and Import Base Images** (prod) — imports `baseImagestoImport` into `hmctsprod`.
+2. **Create and Validate ACR Cache Rules** — runs after Stage 1, against `hmctsprod` only.
+3. **Scan and Import Base Images** (sbox) — imports the same `baseImagestoImport` set into `hmctssbox`. This stage is independent (`dependsOn: []`), so a sbox failure never blocks the prod import or cache-rule stages.
 
-For each image in `baseImagestoImport`:
+## Stage 1 / Stage 3 — Scan and Import Base Images
 
-1. **Check version** — compares the source registry digest against the current digest in ACR. Skips the remaining steps if the image is already up to date.
+Stages 1 (prod) and 3 (sbox) share the same template ([`pipelines/base-image-import-stage.yml`](pipelines/base-image-import-stage.yml)). For each image in `baseImagestoImport`:
+
+1. **Check version** — compares the source registry digest against the current digest in the target ACR. Skips the remaining steps if the image is already up to date. On the first run against a registry the image does not exist yet, so it reports an empty digest and the image is imported (create-if-not-exists).
 2. **Scan with Trivy** — scans the source image for `CRITICAL` and `HIGH` vulnerabilities. Only runs if a new version was found.
 3. **Import to ACR** — imports the image with a digest-tagged version, then re-tags it with the base tag. Only runs if the Trivy scan passed (no critical vulnerabilities).
 
-Currently imported base images:
+Currently imported base images (imported into both `hmctsprod` and `hmctssbox`; the table shows the `hmctsprod` paths):
 
 | Source Registry | Source Image | Tag | ACR Repository |
 |-----------------|--------------|-----|----------------|
@@ -94,6 +98,7 @@ Currently imported base images:
 | `gcr.io` | `distroless/java17-debian12` | `latest` | `hmctsprod.azurecr.io/imported/distroless/java17` |
 | `gcr.io` | `distroless/java17-debian12` | `debug` | `hmctsprod.azurecr.io/imported/distroless/java17` |
 | `gcr.io` | `distroless/python3-debian13` | `latest` | `hmctsprod.azurecr.io/imported/distroless/python3` |
+| `gcr.io` | `distroless/python3-debian13` | `debug` | `hmctsprod.azurecr.io/imported/distroless/python3` |
 | `docker.io` | `jenkins/inbound-agent` | `trixie-jdk21` | `hmctsprod.azurecr.io/imported/jenkins/build-agent` |
 
 To add a new base image, add an entry to `baseImagestoImport` in [`trivy-scan-import.yml`](trivy-scan-import.yml):

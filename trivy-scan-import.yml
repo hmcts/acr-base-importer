@@ -53,6 +53,10 @@ parameters:
       baseImage: 'distroless/python3-debian13'
       baseTag: 'latest'
       targetImage: 'imported/distroless/python3'
+    - baseRegistry: 'gcr.io'
+      baseImage: 'distroless/python3-debian13'
+      baseTag: 'debug'
+      targetImage: 'imported/distroless/python3'
 
 variables:
   - name: acrName
@@ -91,3 +95,17 @@ stages:
       trivyVersion: $(trivyVersion)
       severityThreshold: $(severityThreshold)
       trivyTimeout: $(trivyTimeout)
+
+  # Stage 3: Import the same base images into the sbox ACR.
+  - template: pipelines/base-image-import-stage.yml
+    parameters:
+      baseImagestoImport: ${{ parameters.baseImagestoImport }}
+      serviceConnection: 'DCD-CFT-Sandbox'
+      keyvaultName: 'infra-vault-sandbox'
+      acrName: 'hmctssbox'
+      trivyVersion: $(trivyVersion)
+      severityThreshold: $(severityThreshold)
+      trivyTimeout: $(trivyTimeout)
+      stageName: 'ScanAndImportSbox'
+      stageDisplayName: 'Scan with Trivy and Import to sbox ACR'
+      dependsOn: []
