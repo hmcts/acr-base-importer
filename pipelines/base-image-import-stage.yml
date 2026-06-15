@@ -96,7 +96,7 @@ stages:
                   targetImage: ${{ image.targetImage }}
                   acrName: ${{ parameters.acrName }}
                   serviceConnection: ${{ parameters.serviceConnection }}
-                  baseDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)
+                  baseDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.sourceDigest)
                   acrDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)
                   targetRegistry: ${{ parameters.acrName }}.azurecr.io
                   taskName: import_base_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
