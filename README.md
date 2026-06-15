@@ -1,6 +1,6 @@
 # ACR Base Image Importer
 
-Pipeline to automatically scan, import, and cache container images into the `hmctsprod` Azure Container Registry (ACR).
+Pipeline to automatically scan, import, and cache container images into HMCTS Azure Container Registries (ACR). By default it targets `hmctsprod` (base image import + cache rules). Importing the same base images into `hmctssbox` is opt-in via the `importToSbox` parameter on a manual run; cache rules are managed in `hmctsprod` only.
 
 | Pipeline | Purpose |
 |----------|---------|
@@ -72,17 +72,28 @@ Cache rules are managed in [`acr-repositories.yaml`](acr-repositories.yaml) and 
 
 # Scan and Import Pipeline (`trivy-scan-import.yml`)
 
-The [trivy-scan-import.yml](trivy-scan-import.yml) pipeline runs two stages in sequence.
+The [trivy-scan-import.yml](trivy-scan-import.yml) pipeline has two runtime parameters that select which registries to target:
 
-## Stage 1 — Scan and Import Base Images
+| Parameter | Default | Effect |
+|-----------|---------|--------|
+| `importToProd` | `true` | Runs the prod stages (base image import + cache rules) against `hmctsprod`. |
+| `importToSbox` | `false` | Runs the sbox stage (base image import) against `hmctssbox`. Opt-in. |
 
-For each image in `baseImagestoImport`:
+The daily schedule and merges to `master` use the defaults, so **automated runs target `hmctsprod` only**. To import into `hmctssbox`, start a manual run and tick `importToSbox` (you can untick `importToProd` to import into sbox only). The stages produced:
 
-1. **Check version** — compares the source registry digest against the current digest in ACR. Skips the remaining steps if the image is already up to date.
+1. **Scan and Import Base Images** (prod) — imports `baseImagestoImport` into `hmctsprod`. Only when `importToProd` is `true`.
+2. **Create and Validate ACR Cache Rules** — runs after Stage 1, against `hmctsprod` only. Only when `importToProd` is `true`.
+3. **Scan and Import Base Images** (sbox) — imports the same `baseImagestoImport` set into `hmctssbox`. Only when `importToSbox` is `true`. Independent (`dependsOn: []`), so a sbox failure never blocks the prod stages.
+
+## Stage 1 / Stage 3 — Scan and Import Base Images
+
+Stages 1 (prod) and 3 (sbox) share the same template ([`pipelines/base-image-import-stage.yml`](pipelines/base-image-import-stage.yml)). For each image in `baseImagestoImport`:
+
+1. **Check version** — compares the source registry digest against the current digest in the target ACR. Skips the remaining steps if the image is already up to date. On the first run against a registry the image does not exist yet, so it reports an empty digest and the image is imported (create-if-not-exists).
 2. **Scan with Trivy** — scans the source image for `CRITICAL` and `HIGH` vulnerabilities. Only runs if a new version was found.
 3. **Import to ACR** — imports the image with a digest-tagged version, then re-tags it with the base tag. Only runs if the Trivy scan passed (no critical vulnerabilities).
 
-Currently imported base images:
+Currently imported base images (imported into both `hmctsprod` and `hmctssbox`; the table shows the `hmctsprod` paths):
 
 | Source Registry | Source Image | Tag | ACR Repository |
 |-----------------|--------------|-----|----------------|
@@ -93,6 +104,8 @@ Currently imported base images:
 | `gcr.io` | `distroless/java21-debian12` | `debug` | `hmctsprod.azurecr.io/imported/distroless/java21` |
 | `gcr.io` | `distroless/java17-debian12` | `latest` | `hmctsprod.azurecr.io/imported/distroless/java17` |
 | `gcr.io` | `distroless/java17-debian12` | `debug` | `hmctsprod.azurecr.io/imported/distroless/java17` |
+| `gcr.io` | `distroless/python3-debian13` | `latest` | `hmctsprod.azurecr.io/imported/distroless/python3` |
+| `gcr.io` | `distroless/python3-debian13` | `debug` | `hmctsprod.azurecr.io/imported/distroless/python3` |
 | `docker.io` | `jenkins/inbound-agent` | `trixie-jdk21` | `hmctsprod.azurecr.io/imported/jenkins/build-agent` |
 
 To add a new base image, add an entry to `baseImagestoImport` in [`trivy-scan-import.yml`](trivy-scan-import.yml):

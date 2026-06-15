@@ -64,9 +64,9 @@ steps:
     scriptLocation: scriptPath
     scriptPath: $(System.DefaultWorkingDirectory)/scripts/tag-new-image.sh
     arguments: >
-      --baseTag "${{ parameters.baseTag }}"
+      --tag "${{ parameters.baseTag }}"
       --targetImage "${{ parameters.targetImage }}"
       --acrName "${{ parameters.acrName }}"
       --targetRegistry "${{ parameters.targetRegistry }}"
-      --baseDigest "${{ parameters.baseDigest }}"
+      --sourceDigest "${{ parameters.baseDigest }}"
       --acrDigest "${{ parameters.acrDigest }}"

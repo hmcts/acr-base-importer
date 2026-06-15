@@ -49,6 +49,22 @@ parameters:
       baseImage: 'distroless/java17-debian12'
       baseTag: 'debug'
       targetImage: 'imported/distroless/java17'
+    - baseRegistry: 'gcr.io'
+      baseImage: 'distroless/python3-debian13'
+      baseTag: 'latest'
+      targetImage: 'imported/distroless/python3'
+    - baseRegistry: 'gcr.io'
+      baseImage: 'distroless/python3-debian13'
+      baseTag: 'debug'
+      targetImage: 'imported/distroless/python3'
+- name: importToProd
+  type: boolean
+  displayName: 'Import base images into hmctsprod'
+  default: true
+- name: importToSbox
+  type: boolean
+  displayName: 'Import base images into hmctssbox (sbox)'
+  default: false
 
 variables:
   - name: acrName
@@ -67,23 +83,42 @@ variables:
     value: '10m'
 
 stages:
-  # Stage 1: Import base images
-  - template: pipelines/base-image-import-stage.yml
-    parameters:
-      baseImagestoImport: ${{ parameters.baseImagestoImport }}
-      serviceConnection: $(serviceConnection)
-      keyvaultName: $(keyvaultName)
-      acrName: $(acrName)
-      trivyVersion: $(trivyVersion)
-      severityThreshold: $(severityThreshold)
-      trivyTimeout: $(trivyTimeout)
+  # Prod (importToProd, default true): scan + import base images, then create/validate cache rules.
+  # Runs on the daily schedule and on merge to master.
+  - ${{ if eq(parameters.importToProd, true) }}:
+    # Stage 1: Import base images to hmctsprod
+    - template: pipelines/base-image-import-stage.yml
+      parameters:
+        baseImagestoImport: ${{ parameters.baseImagestoImport }}
+        serviceConnection: $(serviceConnection)
+        keyvaultName: $(keyvaultName)
+        acrName: $(acrName)
+        trivyVersion: $(trivyVersion)
+        severityThreshold: $(severityThreshold)
+        trivyTimeout: $(trivyTimeout)
 
-  # Stage 2: Create and validate cache rules (rules read from acr-repositories.yaml at runtime)
-  - template: pipelines/cache-rules-stage.yml
-    parameters:
-      serviceConnection: $(serviceConnection)
-      keyvaultName: $(keyvaultName)
-      acrName: $(acrName)
-      trivyVersion: $(trivyVersion)
-      severityThreshold: $(severityThreshold)
-      trivyTimeout: $(trivyTimeout)
+    # Stage 2: Create and validate cache rules (rules read from acr-repositories.yaml at runtime)
+    - template: pipelines/cache-rules-stage.yml
+      parameters:
+        serviceConnection: $(serviceConnection)
+        keyvaultName: $(keyvaultName)
+        acrName: $(acrName)
+        trivyVersion: $(trivyVersion)
+        severityThreshold: $(severityThreshold)
+        trivyTimeout: $(trivyTimeout)
+
+  # Sbox (importToSbox, default false): import the same base images into hmctssbox.
+  # Opt-in only - tick the parameter on a manual run. Independent of prod
+  - ${{ if eq(parameters.importToSbox, true) }}:
+    - template: pipelines/base-image-import-stage.yml
+      parameters:
+        baseImagestoImport: ${{ parameters.baseImagestoImport }}
+        serviceConnection: 'DCD-CFT-Sandbox'
+        keyvaultName: 'infra-vault-sandbox'
+        acrName: 'hmctssbox'
+        trivyVersion: $(trivyVersion)
+        severityThreshold: $(severityThreshold)
+        trivyTimeout: $(trivyTimeout)
+        stageName: 'ScanAndImportSbox'
+        stageDisplayName: 'Scan with Trivy and Import to sbox ACR'
+        dependsOn: []

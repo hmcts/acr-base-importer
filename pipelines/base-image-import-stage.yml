@@ -22,10 +22,20 @@ parameters:
   - name: trivyTimeout
     type: string
     default: '10m'
+  - name: stageName
+    type: string
+    default: 'ScanAndImport'
+  - name: stageDisplayName
+    type: string
+    default: 'Scan images with Trivy and Import to ACR'
+  - name: dependsOn
+    type: object
+    default: []
 
 stages:
-  - stage: ScanAndImport
-    displayName: 'Scan images with Trivy and Import to ACR'
+  - stage: ${{ parameters.stageName }}
+    displayName: ${{ parameters.stageDisplayName }}
+    dependsOn: ${{ parameters.dependsOn }}
     jobs:
       - job: ScanAndImportImages
         displayName: 'Scan with Trivy and Import to ACR'
@@ -86,7 +96,7 @@ stages:
                   targetImage: ${{ image.targetImage }}
                   acrName: ${{ parameters.acrName }}
                   serviceConnection: ${{ parameters.serviceConnection }}
-                  baseDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.baseDigest)
+                  baseDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.sourceDigest)
                   acrDigest: $(check_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}.acrDigest)
                   targetRegistry: ${{ parameters.acrName }}.azurecr.io
                   taskName: import_base_${{ replace(replace(image.baseImage, '/', '_'), '-', '_') }}_${{ replace(image.baseTag, '-', '_') }}
