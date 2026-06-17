@@ -21,10 +21,20 @@ parameters:
   - name: trivyTimeout
     type: string
     default: '10m'
+  - name: stageName
+    type: string
+    default: 'CreateCache'
+  - name: stageDisplayName
+    type: string
+    default: 'Create ACR Cache Rules'
+  - name: dependsOn
+    type: object
+    default: []
 
 stages:
-  - stage: CreateCache
-    displayName: 'Create ACR Cache Rules'
+  - stage: ${{ parameters.stageName }}
+    displayName: ${{ parameters.stageDisplayName }}
+    dependsOn: ${{ parameters.dependsOn }}
     jobs:
       - job: ValidateAndCreateCacheRules
         displayName: 'Scan Cache Rules and Create Rules'
