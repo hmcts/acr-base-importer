@@ -50,17 +50,7 @@ steps:
     scriptLocation: inlineScript
     inlineScript: |
       echo "Importing ${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }} as ${{ parameters.targetImage }}:${{ parameters.baseTag }}-${{ parameters.baseDigest }} ..."
-      if [ "${{ parameters.baseRegistry }}" = "docker.io" ]; then
-        az acr import --force --name ${{ parameters.acrName }} \
-          --source ${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }} \
-          --image ${{ parameters.targetImage }}:${{ parameters.baseTag }}-${{ parameters.baseDigest }} \
-          --username $(registry-public-username) \
-          --password $(registry-public-password)
-      else
-        az acr import --force --name ${{ parameters.acrName }} \
-          --source ${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }} \
-          --image ${{ parameters.targetImage }}:${{ parameters.baseTag }}-${{ parameters.baseDigest }}
-      fi
+      az acr import --force --name ${{ parameters.acrName }} --source ${{ parameters.baseRegistry }}/${{ parameters.baseImage }}:${{ parameters.baseTag }} --image ${{ parameters.targetImage }}:${{ parameters.baseTag }}-${{ parameters.baseDigest }}
       echo "##vso[task.setvariable variable=importSucceeded;isOutput=true]true"
 
 # Re-tag as latest (only if import task actually ran and succeeded)
