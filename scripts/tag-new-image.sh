@@ -63,7 +63,7 @@ fi
 
 # Check if the source tag (e.g., latest-$digest) exists in ACR before proceeding
 echo "Checking if source tag ${tag}-${sourceDigest} exists in ${acrName}/${targetImage}..."
-sourceTagExists=$(az acr repository show-tags -n ${acrName} --repository ${targetImage} --query "[?@=='${tag}-${sourceDigest}'] | [0]" -o tsv)
+sourceTagExists=$(az acr repository show-tags -n ${acrName} --repository ${targetImage} --query "[?@=='${tag}-${sourceDigest}'] | [0]" -o tsv 2>/dev/null || true)
 
 if [ -z "$sourceTagExists" ]; then
     echo "Error: Source tag ${tag}-${sourceDigest} does not exist in ${acrName}/${targetImage}. Import must have failed."
