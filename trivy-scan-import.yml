@@ -122,3 +122,15 @@ stages:
         stageName: 'ScanAndImportSbox'
         stageDisplayName: 'Scan with Trivy and Import to sbox ACR'
         dependsOn: []
+
+    - template: pipelines/cache-rules-stage.yml
+      parameters:
+        serviceConnection: 'DCD-CFT-Sandbox'
+        keyvaultName: 'infra-vault-sandbox'
+        acrName: 'hmctssbox'
+        trivyVersion: $(trivyVersion)
+        severityThreshold: $(severityThreshold)
+        trivyTimeout: $(trivyTimeout)
+        stageName: 'CreateCacheSbox'
+        stageDisplayName: 'Create ACR Cache Rules in sbox'
+        dependsOn: []
