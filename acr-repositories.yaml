@@ -247,6 +247,11 @@ rules:
     repoName: jenkins/inbound-agent
     registry: docker.io
     destinationRepo: imported/jenkins/build-agent
+  python-slim:
+    ruleName: python-slim
+    repoName: library/python
+    registry: docker.io
+    destinationRepo: imported/slim/python
   ruby:
     ruleName: ruby-cache
     repoName: library/ruby

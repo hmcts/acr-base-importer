@@ -42,6 +42,7 @@ but will be added on the first running instance of `docker pull hmctsprod.azurec
 | `library/nginx` | `hmctsprod.azurecr.io/imported/nginx` |
 | `library/node` | `hmctsprod.azurecr.io/imported/library/node` |
 | `library/postgres` | `hmctsprod.azurecr.io/imported/postgres` |
+| `library/python` | `hmctsprod.azurecr.io/imported/slim/python` |
 | `library/redis` | `hmctsprod.azurecr.io/imported/redis` |
 | `library/ruby` | `hmctsprod.azurecr.io/imported/library/ruby` |
 | `library/traefik` | `hmctsprod.azurecr.io/imported/traefik` |
