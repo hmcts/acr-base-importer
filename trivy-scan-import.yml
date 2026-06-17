@@ -57,6 +57,10 @@ parameters:
       baseImage: 'distroless/python3-debian13'
       baseTag: 'debug'
       targetImage: 'imported/distroless/python3'
+    - baseRegistry: 'docker.io'
+      baseImage: 'python'
+      baseTag: '3.13-slim-trixie'
+      targetImage: 'imported/slim/python'
 - name: importToProd
   type: boolean
   displayName: 'Import base images into hmctsprod'
