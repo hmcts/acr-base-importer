@@ -50,6 +50,7 @@ but will be added on the first running instance of `docker pull hmctsprod.azurec
 | `mailhog/mailhog` | `hmctsprod.azurecr.io/imported/mailhog/mailhog` |
 | `mikefarah/yq` | `hmctsprod.azurecr.io/imported/mikefarah/yq` |
 | `minio/minio` | `hmctsprod.azurecr.io/imported/minio/minio` |
+| `mwader/static-ffmpeg` | `hmctsprod.azurecr.io/imported/mwader/static-ffmpeg` |
 | `natsio/nats-server-config-reloader` | `hmctsprod.azurecr.io/imported/natsio/nats-server-config-reloader` |
 | `natsio/prometheus-nats-exporter` | `hmctsprod.azurecr.io/imported/natsio/prometheus-nats-exporter` |
 | `netboxcommunity/netbox` | `hmctsprod.azurecr.io/imported/netboxcommunity/netbox` |
