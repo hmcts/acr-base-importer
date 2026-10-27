@@ -257,3 +257,8 @@ rules:
     repoName: library/ruby
     registry: docker.io
     destinationRepo: imported/library/ruby
+  static-ffmpeg:
+    ruleName: mwader-static-ffmpeg
+    repoName: mwader/static-ffmpeg
+    registry: docker.io
+    destinationRepo: imported/mwader/static-ffmpeg
