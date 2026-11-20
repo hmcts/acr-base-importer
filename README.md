@@ -104,6 +104,8 @@ Currently imported base images (imported into both `hmctsprod` and `hmctssbox`; 
 | `gcr.io` | `distroless/base-debian13` | `latest` | `hmctsprod.azurecr.io/imported/distroless/base-debian13` |
 | `gcr.io` | `distroless/java21-debian12` | `latest` | `hmctsprod.azurecr.io/imported/distroless/java21` |
 | `gcr.io` | `distroless/java21-debian12` | `debug` | `hmctsprod.azurecr.io/imported/distroless/java21` |
+| `gcr.io` | `distroless/java21-debian13` | `latest` | `hmctsprod.azurecr.io/imported/distroless/java21-debian13` |
+| `gcr.io` | `distroless/java21-debian13` | `debug` | `hmctsprod.azurecr.io/imported/distroless/java21-debian13` |
 | `gcr.io` | `distroless/java17-debian12` | `latest` | `hmctsprod.azurecr.io/imported/distroless/java17` |
 | `gcr.io` | `distroless/java17-debian12` | `debug` | `hmctsprod.azurecr.io/imported/distroless/java17` |
 | `gcr.io` | `distroless/python3-debian13` | `latest` | `hmctsprod.azurecr.io/imported/distroless/python3` |
